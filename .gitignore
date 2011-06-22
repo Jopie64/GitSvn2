@@ -1,0 +1,12 @@
+
+/LibMakers/Release
+/LibMakers/Debug
+/lib
+*.user
+*.aps
+*.suo
+*.ncb
+ 
+Debug/
+Release/
+tests
