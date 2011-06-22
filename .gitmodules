@@ -1,0 +1,3 @@
+[submodule "ext\\GitCpp"]
+	path = ext\\GitCpp
+	url = git://github.com/Jopie64/GitCpp.git
