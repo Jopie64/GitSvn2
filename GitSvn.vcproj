@@ -18,8 +18,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)\bin\$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)\int\$(ProjectName)"
 			ConfigurationType="1"
 			CharacterSet="1"
 			>
@@ -41,6 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories="ext\GitCpp\libgit2\include;D:\Develop\boost;ext\GitCpp\libgit2\deps\zlib"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -89,8 +90,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)\bin\$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)\int\$(ProjectName)"
 			ConfigurationType="1"
 			CharacterSet="1"
 			WholeProgramOptimization="1"
@@ -114,6 +115,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
+				AdditionalIncludeDirectories="ext\GitCpp\libgit2\include;D:\Develop\boost;ext\GitCpp\libgit2\deps\zlib"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -194,6 +196,18 @@
 					/>
 				</FileConfiguration>
 			</File>
+			<Filter
+				Name="Ext"
+				>
+				<File
+					RelativePath=".\ext\GitCpp\Git.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\ext\GitCpp\jstd\JStd.cpp"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -208,6 +222,18 @@
 				RelativePath=".\targetver.h"
 				>
 			</File>
+			<Filter
+				Name="Ext"
+				>
+				<File
+					RelativePath=".\ext\GitCpp\Git.h"
+					>
+				</File>
+				<File
+					RelativePath=".\ext\GitCpp\jstd\JStd.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Resource Files"
