@@ -1,0 +1,4 @@
+Put an extraction from the svn-win32-1.6.xx_dev.zip here.
+
+You can download that here:
+http://sourceforge.net/projects/win32svn/files/
