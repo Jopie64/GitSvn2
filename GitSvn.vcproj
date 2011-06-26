@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="ext\GitCpp\libgit2\include;D:\Develop\boost;ext\GitCpp\libgit2\deps\zlib"
+				AdditionalIncludeDirectories="ext;ext\GitCpp\libgit2\include;D:\Develop\boost;ext\GitCpp\libgit2\deps\zlib"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -115,7 +115,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="ext\GitCpp\libgit2\include;D:\Develop\boost;ext\GitCpp\libgit2\deps\zlib"
+				AdditionalIncludeDirectories="ext;ext\GitCpp\libgit2\include;D:\Develop\boost;ext\GitCpp\libgit2\deps\zlib"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
