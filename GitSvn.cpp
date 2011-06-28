@@ -53,10 +53,19 @@ void Test()
 	Git::CSignature sig("Johan", "johan@test.nl");
 
 	Git::CTreeBuilder treeB;
-	treeB.Insert(L"test1.txt", repo.WriteBlob("This is test file number 1..."), 0);
-	treeB.Insert(L"test2.txt", repo.WriteBlob("This is test file number 2..."), 0);
+	treeB.Insert(L"test1.txt", repo.WriteBlob("This is test file number 1...\n"));
+	treeB.Insert(L"test2.txt", repo.WriteBlob("This is test file number 2...\n"));
 
-	Git::COid oid = repo.Commit("HEAD", sig, sig, "Test commit 1", repo.Write(treeB), Git::COids());
+	Git::COid oidTree = repo.Write(treeB);
+	Git::COid oidCommit = repo.Commit("HEAD", sig, sig, "Test commit 1", oidTree, Git::COids());
 
-	cout << "Commit done: " << oid << endl;
+	cout << "1st commit done: " << oidCommit << endl;
+
+	Git::CTreeBuilder treeB2(Git::CTree(repo, oidTree));
+	treeB2.Insert(L"test2.txt", repo.WriteBlob("This is test file number 2...\nA line has just been added to this file.\n"));
+	oidTree = repo.Write(treeB2);
+	oidCommit = repo.Commit("HEAD", sig, sig, "Test commit 2", oidTree, oidCommit);
+
+
+	cout << "2nd commit done: " << oidCommit << endl;
 }
