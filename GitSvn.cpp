@@ -49,4 +49,14 @@ void Test()
 
 		repo.Create(testRepoPath, false);
 	}
+
+	Git::CSignature sig("Johan", "johan@test.nl");
+
+	Git::CTreeBuilder treeB;
+	treeB.Insert(L"test1.txt", repo.WriteBlob("This is test file number 1..."), 0);
+	treeB.Insert(L"test2.txt", repo.WriteBlob("This is test file number 2..."), 0);
+
+	Git::COid oid = repo.Commit("HEAD", sig, sig, "Test commit 1", repo.Write(treeB), Git::COids());
+
+	cout << "Commit done: " << oid << endl;
 }
