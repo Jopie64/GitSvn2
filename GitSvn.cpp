@@ -7,6 +7,11 @@
 #include "GitCpp\jstd\JStd.h"
 
 #include <windows.h>
+
+//Some libgit2 <-> svn collition
+#undef strcasecmp
+#undef strncasecmp
+#include "svncpp\client.hpp"
 using namespace std;
 
 #pragma comment(lib, "libsvncpp.lib")
