@@ -9,6 +9,7 @@
 #include <windows.h>
 using namespace std;
 
+#pragma comment(lib, "libsvncpp.lib")
 void Test();
 
 int _tmain(int argc, _TCHAR* argv[])
