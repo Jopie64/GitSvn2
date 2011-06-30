@@ -6,16 +6,30 @@
 #include <iostream>
 #include "GitCpp\jstd\JStd.h"
 
+
 #include <windows.h>
 
 //Some libgit2 <-> svn collition
 #undef strcasecmp
 #undef strncasecmp
+
+#include "JSvn.h"
+#include "svncpp\pool.hpp"
 #include "svncpp\client.hpp"
 using namespace std;
 
 #pragma comment(lib, "libsvncpp.lib")
+#pragma comment(lib, "ext\\svn\\lib\\libsvn_client-1.lib")
+#pragma comment(lib, "ext\\svn\\lib\\libsvn_wc-1.lib")
+#pragma comment(lib, "ext\\svn\\lib\\libsvn_subr-1.lib")
+#pragma comment(lib, "ext\\svn\\lib\\apr\\libapr-1.lib")
+#pragma comment(lib, "ext\\svn\\lib\\apr-util\\libaprutil-1.lib")
+
+
 void Test();
+
+svn::Context* G_svnCtxt = NULL;
+svn::Client* G_svnClient = NULL;
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -24,6 +38,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	try
 	{
+		G_svnCtxt = new svn::Context();
+		G_svnClient = new svn::Client(G_svnCtxt);
+
 		Test();
 
 	}
@@ -32,7 +49,13 @@ int _tmain(int argc, _TCHAR* argv[])
 	{
 		cout << "Something wend wrong: " << e.what() << endl;
 	}
+	catch(svn::Exception& e)
+	{
+		cout << "Some subversion stuff wend wrong: " << e.message() << endl;
+	}
 
+	delete G_svnClient;
+	delete G_svnCtxt;
 
 	char c;
 	cin >> c;
@@ -74,4 +97,27 @@ void Test()
 
 
 	cout << "2nd commit done: " << oidCommit << endl;
+
+
+	cout << "Doing svn stuff..." << endl;
+
+	//svn::Pool svnPool;
+
+	//svn::Client svnClient;
+	//const char* svnrepo = "file:///D:/Develop/test/gitsvnbug/svnrepo";
+	const char* svnrepo = "svn://jdmstorage.jdm1.maassluis/johan";
+	const svn::LogEntries* entries = G_svnClient->log(svnrepo, svn::Revision::START, svn::Revision::HEAD, true);
+
+	cout << "Log got " << entries->size() << " entries." << endl;
+	for(svn::LogEntries::const_iterator i = entries->begin(); i != entries->end(); ++i)
+	{
+		cout << "Rev[" << i->revision << "] " << i->message << endl;
+		for(std::list<svn::LogChangePathEntry>::const_iterator p = i->changedPaths.begin(); p != i->changedPaths.end(); ++p)
+		{
+			cout << " -" << p->action << ": " << p->path << endl;
+		}
+	}
+
+	delete entries;
+
 }
