@@ -53,7 +53,7 @@
 #include "svncpp/revision.hpp"
 #include "svncpp/log_entry.hpp"
 #include "svncpp/annotate_line.hpp"
-
+#include <functional>
 
 namespace svn
 {
@@ -515,6 +515,17 @@ public:
         const Revision & revisionEnd,
         bool discoverChangedPaths = false,
         bool strictNodeHistory = true) throw(ClientException);
+
+	typedef std::tr1::function<void (LogEntry& entry)> LogEntryCb;
+
+	void
+    log(const LogEntryCb& cb,
+		const char * path,
+        const Revision & revisionStart,
+        const Revision & revisionEnd,
+        bool discoverChangedPaths = false,
+        bool strictNodeHistory = true) throw(ClientException);
+
 
     /**
      * Produce diff output which describes the delta between

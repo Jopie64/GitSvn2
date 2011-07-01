@@ -80,7 +80,7 @@ public:
 
 
   ClientException::ClientException(svn_error_t * error) throw()
-      : Exception("")
+      : Exception(""), m_error(error)
   {
     if (error == 0)
       return;
@@ -109,7 +109,6 @@ public:
 
       next = next->child;
     }
-    svn_error_clear(error);
   }
 
 
@@ -120,13 +119,24 @@ public:
   }
 
 
+  svn_error_t* ClientException::detach()
+  {
+	  svn_error_t* error = m_error;
+	  m_error = NULL;
+	  return error;
+  }
+
   ClientException::~ClientException() throw()
   {
+    if(m_error)
+		svn_error_clear(m_error);
   }
 
   ClientException::ClientException(const ClientException & src) throw()
-      : Exception(src.message())
+      : Exception(src.message()), m_error(NULL)
   {
+	  //todo: maybe copy the svn_error_t? Dont know how to yet... This usually is enaugh though.
+	  m_error = const_cast<ClientException&>(src).detach();
   }
 }
 /* -----------------------------------------------------------------

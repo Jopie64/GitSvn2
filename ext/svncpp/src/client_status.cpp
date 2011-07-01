@@ -45,42 +45,66 @@
 
 namespace svn
 {
-  static svn_error_t *
-  logReceiver(void *baton,
-              apr_hash_t * changedPaths,
-              svn_revnum_t rev,
-              const char *author,
-              const char *date,
-              const char *msg,
-              apr_pool_t * pool)
+  struct LogReceiver
   {
-    LogEntries * entries = (LogEntries *) baton;
-    entries->insert(entries->begin(), LogEntry(rev, author, date, msg));
+	  Client::LogEntryCb m_cb;
 
-    if (changedPaths != NULL)
-    {
-      LogEntry &entry = entries->front();
+	  static svn_error_t *
+	  receive_s(void *baton,
+				  apr_hash_t * changedPaths,
+				  svn_revnum_t rev,
+				  const char *author,
+				  const char *date,
+				  const char *msg,
+				  apr_pool_t * pool)
+	  {
+		  try
+		  {
+			  ((LogReceiver*)baton)->receive(changedPaths, rev, author, date, msg, pool);
+		  }
+		  catch(ClientException& e)
+		  {
+			  return e.detach();
+		  }
+		  return NULL;
+	  }
 
-      for (apr_hash_index_t *hi = apr_hash_first(pool, changedPaths);
-           hi != NULL;
-           hi = apr_hash_next(hi))
-      {
-        char *path;
-        void *val;
-        apr_hash_this(hi, (const void **)&path, NULL, &val);
+	  void
+	  receive(
+				  apr_hash_t * changedPaths,
+				  svn_revnum_t rev,
+				  const char *author,
+				  const char *date,
+				  const char *msg,
+				  apr_pool_t * pool)
+	  {
+		LogEntry entry(rev, author, date, msg);
 
-        svn_log_changed_path_t *log_item = reinterpret_cast<svn_log_changed_path_t *>(val);
+		if (changedPaths != NULL)
+		{
 
-        entry.changedPaths.push_back(
-          LogChangePathEntry(path,
-                             log_item->action,
-                             log_item->copyfrom_path,
-                             log_item->copyfrom_rev));
-      }
-    }
+		  for (apr_hash_index_t *hi = apr_hash_first(pool, changedPaths);
+			   hi != NULL;
+			   hi = apr_hash_next(hi))
+		  {
+			char *path;
+			void *val;
+			apr_hash_this(hi, (const void **)&path, NULL, &val);
 
-    return NULL;
-  }
+			svn_log_changed_path_t *log_item = reinterpret_cast<svn_log_changed_path_t *>(val);
+
+			entry.changedPaths.push_back(
+			  LogChangePathEntry(path,
+								 log_item->action,
+								 log_item->copyfrom_path,
+								 log_item->copyfrom_rev));
+		  }
+		}
+
+		m_cb(entry);
+	  }
+
+  };
 
   static void
   statusEntriesFunc(void *baton,
@@ -331,38 +355,58 @@ public:
     }
   }
 
-
+  void addLogEntry(LogEntries* entries, const LogEntry& entry)
+  {
+	  entries->insert(entries->begin(), entry);
+  }
 
   const LogEntries *
   Client::log(const char * path, const Revision & revisionStart,
               const Revision & revisionEnd, bool discoverChangedPaths,
               bool strictNodeHistory) throw(ClientException)
   {
+    LogEntries * entries = new LogEntries();
+	try
+	{
+		log(std::tr1::bind(&addLogEntry, entries, std::tr1::placeholders::_1),
+			path, revisionStart, revisionEnd, discoverChangedPaths, strictNodeHistory);
+	}
+	catch(...)
+	{
+		delete entries;
+		throw;
+	}
+	return entries;
+  }
+
+
+  void
+  Client::log(const LogEntryCb& cb,
+			  const char * path,
+			  const Revision & revisionStart,
+			  const Revision & revisionEnd,
+			  bool discoverChangedPaths,
+			  bool strictNodeHistory) throw(ClientException)
+  {
     Pool pool;
     Targets target(path);
-    LogEntries * entries = new LogEntries();
-    svn_error_t *error;
+	LogReceiver recv;
+	recv.m_cb = cb;
     int limit = 0;
 
-    error = svn_client_log2(
+    svn_error_t * error = svn_client_log2(
               target.array(pool),
               revisionStart.revision(),
               revisionEnd.revision(),
               limit,
               discoverChangedPaths ? 1 : 0,
               strictNodeHistory ? 1 : 0,
-              logReceiver,
-              entries,
+			  &LogReceiver::receive_s,
+              &recv,
               *m_context, // client ctx
               pool);
-
-    if (error != NULL)
-    {
-      delete entries;
-      throw ClientException(error);
-    }
-
-    return entries;
+	if(error)
+		throw ClientException(error);
   }
 
 

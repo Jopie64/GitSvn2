@@ -98,10 +98,14 @@ namespace svn
 
     virtual ~ClientException() throw();
 
+	svn_error_t*	detach();
+
   private:
     ClientException() throw();
 
     ClientException & operator = (ClientException &);
+	
+	svn_error_t* m_error;
   };
 
 }
