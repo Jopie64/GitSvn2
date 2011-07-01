@@ -200,6 +200,10 @@
 					/>
 				</FileConfiguration>
 			</File>
+			<File
+				RelativePath=".\SvnToGit.cpp"
+				>
+			</File>
 			<Filter
 				Name="Ext"
 				>
@@ -224,6 +228,10 @@
 			</File>
 			<File
 				RelativePath=".\stdafx.h"
+				>
+			</File>
+			<File
+				RelativePath=".\SvnToGit.h"
 				>
 			</File>
 			<File

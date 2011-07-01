@@ -18,6 +18,8 @@
 #include "svncpp\client.hpp"
 using namespace std;
 
+#include "SvnToGit.h"
+
 #pragma comment(lib, "libsvncpp.lib")
 #pragma comment(lib, "ext\\svn\\lib\\libsvn_client-1.lib")
 #pragma comment(lib, "ext\\svn\\lib\\libsvn_wc-1.lib")
@@ -47,11 +49,11 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	catch(exception& e)
 	{
-		cout << "Something wend wrong: " << e.what() << endl;
+		cout << "Something went wrong: " << e.what() << endl;
 	}
 	catch(svn::Exception& e)
 	{
-		cout << "Some subversion stuff wend wrong: " << e.message() << endl;
+		cout << "Some subversion stuff went wrong: " << e.message() << endl;
 	}
 
 	delete G_svnClient;
@@ -62,10 +64,22 @@ int _tmain(int argc, _TCHAR* argv[])
 	return 0;
 }
 
+void OnLogEntry(const svn::LogEntry& entry)
+{
+
+
+	cout << "\r[Rev: " << entry.revision << "]" << flush; //<< entry.message.substr(0,50) << flush;
+}
+
 void Test()
 {
 	Git::CRepo repo;
 	static const wchar_t* testRepoPath = L"D:/Test/gitsvn/gitpart/";
+	const char* svnrepo = "svn://jdmstorage.jdm1.maassluis/johan";
+
+	SvnToGitSync(testRepoPath, svnrepo);
+
+	return;
 	
 	try
 	{
@@ -105,7 +119,8 @@ void Test()
 
 	//svn::Client svnClient;
 	//const char* svnrepo = "file:///D:/Develop/test/gitsvnbug/svnrepo";
-	const char* svnrepo = "svn://jdmstorage.jdm1.maassluis/johan";
+
+#if 0
 	const svn::LogEntries* entries = G_svnClient->log(svnrepo, svn::Revision::START, svn::Revision::HEAD, true);
 
 	cout << "Log got " << entries->size() << " entries." << endl;
@@ -119,5 +134,8 @@ void Test()
 	}
 
 	delete entries;
+#endif
 
+	G_svnClient->log(&OnLogEntry, svnrepo, svn::Revision::START, svn::Revision::HEAD);
+	cout << endl << "Done." << endl;
 }
