@@ -17,11 +17,13 @@ extern svn::Client* G_svnClient;
 
 struct RevSyncCtxt
 {
+	typedef std::tr1::shared_ptr<Git::CTree> sharedTree;
 	RevSyncCtxt(Git::CRepo& gitRepo):m_gitRepo(gitRepo){}
 
 	Git::CRepo& m_gitRepo;
 
-	Git::COid m_lastCommit;
+	Git::COid	m_lastCommit;
+	sharedTree	m_lastTree;
 
 	std::string m_csBaseRefName;
 
@@ -48,6 +50,14 @@ struct RevSyncCtxt
 		return m_csBaseRefName + "/_svnmeta";
 	}
 
+	static std::string MakeGitPathName(std::string src)
+	{
+		size_t pos = src.find_first_not_of('/');
+		if(pos != std::string::npos)
+			src = src.substr(pos);
+		return src;
+	}
+
 	void OnSvnLogEntry(const svn::LogEntry& entry)
 	{
 		if(entry.revision == 0)
@@ -56,11 +66,14 @@ struct RevSyncCtxt
 		cout << "\rFetching rev " << entry.revision << "..." << flush;
 
 
-		Git::CTreeBuilder treeB;
-		treeB.Insert(L"test1.txt", m_gitRepo.WriteBlob("This is test file number 1...\n"));
-		treeB.Insert(L"test2.txt", m_gitRepo.WriteBlob("This is test file number 2...\n"));
+		Git::CTreeBuilder treeB(&*m_lastTree);
+		for(std::list<svn::LogChangePathEntry>::const_iterator i = entry.changedPaths.begin(); i != entry.changedPaths.end(); ++i)
+		{
+			std::string path = MakeGitPathName(i->path);
+			treeB.Insert(JStd::String::ToWide(path, CP_UTF8).c_str(), m_gitRepo.WriteBlob("This is a file...\n"));
+		}
 
-		Git::COid tree = m_gitRepo.Write(treeB);
+		m_lastTree = sharedTree(new Git::CTree(m_gitRepo, m_gitRepo.Write(treeB)));
 
 		Git::CSignature sig(entry.author.c_str(), (entry.author + "@svn").c_str());
 
@@ -74,7 +87,7 @@ struct RevSyncCtxt
 		if(!m_lastCommit.isNull())
 			oids << m_lastCommit;
 		//m_lastCommit = m_gitRepo.Commit((m_csBaseRefName + "/_svnmeta").c_str(), sig, sig, msg.str().c_str(), tree, oids);
-		m_lastCommit = m_gitRepo.Commit(m_lastCommit.isNull() ? "HEAD" : SvnMetaRefName().c_str(), sig, sig, msg.str().c_str(), tree, oids);
+		m_lastCommit = m_gitRepo.Commit(m_lastCommit.isNull() ? "HEAD" : SvnMetaRefName().c_str(), sig, sig, msg.str().c_str(), *m_lastTree, m_gitRepo.ToCommits( oids));
 
 		if(oids.m_oids.empty())
 		{
@@ -112,6 +125,7 @@ void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char
 	G_svnClient->log(std::tr1::bind(&RevSyncCtxt::OnSvnLogEntry, &ctxt, std::tr1::placeholders::_1),
 					 svnRepoUrl,
 					 svn::Revision::START,
-					 svn::Revision::HEAD);
+					 svn::Revision::HEAD,
+					 true);
 	cout << "Done." << endl;
 }
