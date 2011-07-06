@@ -18,9 +18,10 @@ extern svn::Client* G_svnClient;
 struct RevSyncCtxt
 {
 	typedef std::tr1::shared_ptr<Git::CTree> sharedTree;
-	RevSyncCtxt(Git::CRepo& gitRepo):m_gitRepo(gitRepo){}
+	RevSyncCtxt(Git::CRepo& gitRepo, const std::string& svnRepoUrl):m_gitRepo(gitRepo), m_svnRepoUrl(svnRepoUrl){}
 
 	Git::CRepo& m_gitRepo;
+	std::string m_svnRepoUrl;
 
 	Git::COid	m_lastCommit;
 	sharedTree	m_lastTree;
@@ -69,8 +70,19 @@ struct RevSyncCtxt
 		Git::CTreeBuilder treeB(&*m_lastTree);
 		for(std::list<svn::LogChangePathEntry>::const_iterator i = entry.changedPaths.begin(); i != entry.changedPaths.end(); ++i)
 		{
-			std::string path = MakeGitPathName(i->path);
-			treeB.Insert(JStd::String::ToWide(path, CP_UTF8).c_str(), m_gitRepo.WriteBlob("This is a file...\n"));
+			try
+			{
+				std::ostringstream os;
+				svn::Stream svns(os);
+				G_svnClient->get(svns, m_svnRepoUrl + i->path, entry.revision);
+				std::string path = MakeGitPathName(i->path);
+				treeB.Insert(JStd::String::ToWide(path, CP_UTF8).c_str(), m_gitRepo.WriteBlob(os.str()));
+			}
+			catch(svn::ClientException& e)
+			{
+				if(e.apr_err() == SVN_ERR_CLIENT_IS_DIRECTORY)
+					cout << "jay!" << endl;
+			}
 		}
 
 		m_lastTree = sharedTree(new Git::CTree(m_gitRepo, m_gitRepo.Write(treeB)));
@@ -101,7 +113,6 @@ struct RevSyncCtxt
 void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char* refBaseName)
 {
 //	Git::CSignature sig("Johan", "johan@test.nl");
-
 	Git::CRepo gitRepo;
 	try
 	{
@@ -118,7 +129,7 @@ void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char
 
 	cout << "Fetching subversion log from " << svnRepoUrl << " ..." << endl;
 
-	RevSyncCtxt ctxt(gitRepo);
+	RevSyncCtxt ctxt(gitRepo,svnRepoUrl);
 	//ctxt.CheckExistingRefs();
 
 	ctxt.m_csBaseRefName = refBaseName;
