@@ -7,23 +7,27 @@ namespace svn{
 Stream::Stream()
 : m_stream(NULL), m_is(NULL), m_os(NULL)
 {
+	CreateSvnStream();
 }
 
 Stream::Stream(std::istream& stream)
 : m_stream(NULL), m_is(NULL), m_os(NULL)
 {
+	CreateSvnStream();
 	Attach(stream);
 }
 
 Stream::Stream(std::ostream& stream)
 : m_stream(NULL), m_is(NULL), m_os(NULL)
 {
+	CreateSvnStream();
 	Attach(stream);
 }
 
 Stream::Stream(std::iostream& stream)
 : m_stream(NULL), m_is(NULL), m_os(NULL)
 {
+	CreateSvnStream();
 	Attach(stream);
 }
 
