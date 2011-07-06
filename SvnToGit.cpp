@@ -8,7 +8,7 @@
 #undef strcasecmp
 #undef strncasecmp
 
-#include "JSvn.h"
+#include "svncpp\stream.hpp"
 #include "svncpp\pool.hpp"
 #include "svncpp\client.hpp"
 using namespace std;

@@ -13,7 +13,6 @@
 #undef strcasecmp
 #undef strncasecmp
 
-#include "JSvn.h"
 #include "svncpp\pool.hpp"
 #include "svncpp\client.hpp"
 using namespace std;
@@ -115,6 +114,8 @@ void Test()
 
 
 	cout << "Doing svn stuff..." << endl;
+
+
 
 	//svn::Pool svnPool;
 

@@ -53,6 +53,7 @@
 #include "svncpp/revision.hpp"
 #include "svncpp/log_entry.hpp"
 #include "svncpp/annotate_line.hpp"
+#include "svncpp/stream.hpp"
 #include <functional>
 
 namespace svn
@@ -327,6 +328,11 @@ public:
         const Revision & revision,
         const Revision & peg_revision = Revision::UNSPECIFIED) throw(ClientException);
 
+    void
+    get(Stream & dst,
+        const Path & path,
+        const Revision & revision,
+        const Revision & peg_revision = Revision::UNSPECIFIED) throw(ClientException);
 
     /**
      * Retrieves the contents for a specific @a revision of

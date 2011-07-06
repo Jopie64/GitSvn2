@@ -1,6 +1,6 @@
-#include "StdAfx.h"
-#include "JSvn.h"
+#include "svncpp/svn_general.hpp"
 #include "svncpp/url.hpp"
+#include "svn_io.h"
 
 namespace svn{
 

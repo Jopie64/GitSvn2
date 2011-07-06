@@ -236,6 +236,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ext\svncpp\src\stream.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\ext\svncpp\src\svn_general.cpp"
+				>
+			</File>
+			<File
 				RelativePath="ext\svncpp\src\targets.cpp"
 				>
 			</File>
@@ -330,7 +338,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ext\svncpp\include\svncpp\stream.hpp"
+				>
+			</File>
+			<File
 				RelativePath="ext\svncpp\include\svncpp\string_wrapper.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\ext\svncpp\include\svncpp\svn_general.hpp"
 				>
 			</File>
 			<File

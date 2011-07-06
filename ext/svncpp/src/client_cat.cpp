@@ -169,6 +169,28 @@ namespace svn
     // finalize stuff
     apr_file_close(file);
   }
+
+
+  void
+  Client::get(Stream & dst,
+              const Path & path,
+              const Revision & revision,
+              const Revision & peg_revision) throw(ClientException)
+  {
+    Pool pool;
+
+    // let svn_client_cat write to the stream
+	svn_error_t * error = svn_client_cat2(
+						  dst.GetInternalObj(),
+						  path.c_str(),
+						  peg_revision.revision() ,
+						  revision.revision(),
+						  *m_context,
+						  pool);
+
+      if (error != 0)
+        throw ClientException(error);
+  }
 }
 
 /* -----------------------------------------------------------------
