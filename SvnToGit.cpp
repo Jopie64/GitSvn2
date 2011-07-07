@@ -15,16 +15,117 @@ using namespace std;
 
 extern svn::Client* G_svnClient;
 
+namespace Git
+{
+
+class CTreeNode
+{
+public:
+	typedef std::list<CTreeNode> list_t;
+
+	CTreeNode();
+	CTreeNode(const std::string& name);
+	virtual ~CTreeNode();
+
+	CTreeNode*	GetByPath(const char* name);
+	void		Insert(const char* name, COid oid, int attributes = 0100644);
+
+	COid		Write(CRepo& repo);
+	int			GetAttributes()const;
+
+	std::string m_name;
+	COid		m_oid;
+	list_t		m_subTree; //when this one is not empty, its not a leaf
+	int			m_attributes;
+};
+
+CTreeNode::CTreeNode()
+:	m_attributes(-1)
+{
+}
+
+CTreeNode::CTreeNode(const std::string& name)
+:	m_attributes(-1), m_name(name)
+{
+}
+
+CTreeNode::~CTreeNode()
+{
+}
+
+CTreeNode* CTreeNode::GetByPath(const char* name)
+{
+	const char* nameStart = name;
+	if(*nameStart == '/')
+		++nameStart;
+	const char* nameEnd = strchr(nameStart, '/');
+	if(nameEnd == NULL)
+		nameEnd = nameStart + strlen(nameStart);
+	if(nameEnd == nameStart)
+		//Empty name. Its this treenode.
+		return this;
+	std::string namePart = std::string(nameStart, nameEnd);
+	list_t::iterator i;
+	for(i = m_subTree.begin(); i != m_subTree.end(); ++i)
+		if(i->m_name == namePart)
+			break;
+	if(i == m_subTree.end())
+		i = m_subTree.insert(m_subTree.end(), namePart);
+	return i->GetByPath(nameEnd);
+}
+
+void CTreeNode::Insert(const char* name, COid oid, int attributes)
+{
+	CTreeNode* node = GetByPath(name);
+	node->m_oid			= oid;
+	node->m_attributes	= attributes;
+}
+
+int CTreeNode::GetAttributes()const
+{
+	if(m_attributes >= 0)
+		return m_attributes;
+	if(m_subTree.empty())
+		return 0100644;
+	return 040000;
+}
+
+COid CTreeNode::Write(CRepo& repo)
+{
+	if(m_subTree.empty())
+		return m_oid;
+	CTreeBuilder treeB;
+	for(list_t::iterator i = m_subTree.begin(); i != m_subTree.end(); ++i)
+	{
+		COid oid = i->Write(repo);
+		if(oid.isNull())
+			continue;
+		treeB.Insert(JStd::String::ToWide(i->m_name, CP_UTF8).c_str(), oid, i->GetAttributes());
+	}
+	return repo.Write(treeB);
+}
+
+
+
+}
+
 struct RevSyncCtxt
 {
 	typedef std::tr1::shared_ptr<Git::CTree> sharedTree;
-	RevSyncCtxt(Git::CRepo& gitRepo, const std::string& svnRepoUrl):m_gitRepo(gitRepo), m_svnRepoUrl(svnRepoUrl){}
+	RevSyncCtxt(Git::CRepo& gitRepo, const std::string& svnRepoUrl):m_gitRepo(gitRepo), m_svnRepoUrl(svnRepoUrl)
+	{
+		m_Tree_Meta		= m_rootTree.GetByPath("meta");
+		m_Tree_Content	= m_rootTree.GetByPath("content");
+	}
 
 	Git::CRepo& m_gitRepo;
 	std::string m_svnRepoUrl;
 
 	Git::COid	m_lastCommit;
-	sharedTree	m_lastTree;
+	//sharedTree	m_lastTree;
+	Git::CTreeNode	m_rootTree;
+	Git::CTreeNode*	m_Tree_Content;
+	Git::CTreeNode*	m_Tree_Meta;
 
 	std::string m_csBaseRefName;
 
@@ -67,16 +168,14 @@ struct RevSyncCtxt
 		cout << "\rFetching rev " << entry.revision << "..." << flush;
 
 
-		Git::CTreeBuilder treeB(&*m_lastTree);
+		//Git::CTreeBuilder treeB(&*m_lastTree);
 		for(std::list<svn::LogChangePathEntry>::const_iterator i = entry.changedPaths.begin(); i != entry.changedPaths.end(); ++i)
 		{
 			try
 			{
 				std::ostringstream os;
-				svn::Stream svns(os);
-				G_svnClient->get(svns, m_svnRepoUrl + i->path, entry.revision);
-				std::string path = MakeGitPathName(i->path);
-				treeB.Insert(JStd::String::ToWide(path, CP_UTF8).c_str(), m_gitRepo.WriteBlob(os.str()));
+				G_svnClient->get(svn::Stream(os), m_svnRepoUrl + i->path, entry.revision);
+				m_Tree_Content->Insert(i->path.c_str(), m_gitRepo.WriteBlob(os.str()));
 			}
 			catch(svn::ClientException& e)
 			{
@@ -85,7 +184,7 @@ struct RevSyncCtxt
 			}
 		}
 
-		m_lastTree = sharedTree(new Git::CTree(m_gitRepo, m_gitRepo.Write(treeB)));
+		Git::CTree tree(m_gitRepo, m_rootTree.Write(m_gitRepo));
 
 		Git::CSignature sig(entry.author.c_str(), (entry.author + "@svn").c_str());
 
@@ -99,7 +198,7 @@ struct RevSyncCtxt
 		if(!m_lastCommit.isNull())
 			oids << m_lastCommit;
 		//m_lastCommit = m_gitRepo.Commit((m_csBaseRefName + "/_svnmeta").c_str(), sig, sig, msg.str().c_str(), tree, oids);
-		m_lastCommit = m_gitRepo.Commit(m_lastCommit.isNull() ? "HEAD" : SvnMetaRefName().c_str(), sig, sig, msg.str().c_str(), *m_lastTree, m_gitRepo.ToCommits( oids));
+		m_lastCommit = m_gitRepo.Commit(m_lastCommit.isNull() ? "HEAD" : SvnMetaRefName().c_str(), sig, sig, msg.str().c_str(), tree, m_gitRepo.ToCommits( oids));
 
 		if(oids.m_oids.empty())
 		{
