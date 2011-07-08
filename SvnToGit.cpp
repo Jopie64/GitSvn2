@@ -70,8 +70,12 @@ struct RevSyncCtxt
 	{
 		if(entry.revision == 0)
 			return; //Skip rev 0..
+
+		std::ostringstream text;
+
+		text << "\rFetching rev " << entry.revision;
 		
-		cout << "\rFetching rev " << entry.revision << "..." << flush;
+		cout << text.str() << "..." << flush;
 
 
 		//Git::CTreeBuilder treeB(&*m_lastTree);
@@ -79,6 +83,7 @@ struct RevSyncCtxt
 		{
 			try
 			{
+				cout << text.str() << ": " << i->path << " ..." << flush;
 				std::ostringstream os;
 				G_svnClient->get(svn::Stream(os), m_svnRepoUrl + i->path, entry.revision);
 				m_Tree_Content->Insert(i->path.c_str(), m_gitRepo.WriteBlob(os.str()));
@@ -87,6 +92,8 @@ struct RevSyncCtxt
 			{
 				if(e.apr_err() == SVN_ERR_CLIENT_IS_DIRECTORY)
 					cout << "jay!" << endl;
+				else
+					cout << "Oops: " << e.message() << endl;
 			}
 		}
 

@@ -76,6 +76,7 @@ void Test()
 	static const wchar_t* testRepoPath = L"D:/Test/gitsvn/gitpart/";
 	//const char* svnrepo = "svn://jdmstorage.jdm1.maassluis/johan";
 	const char* svnrepo = "file:///d:/Develop/test/gitsvnbug/svnrepo";
+	//const char* svnrepo = "http://gwt-multipage.googlecode.com/svn";
 
 	SvnToGitSync(testRepoPath, svnrepo);
 
