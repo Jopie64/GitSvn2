@@ -5,27 +5,27 @@
 namespace svn{
 
 Stream::Stream()
-: m_stream(NULL), m_is(NULL), m_os(NULL)
+: m_is(NULL), m_os(NULL)
 {
 	CreateSvnStream();
 }
 
 Stream::Stream(std::istream& stream)
-: m_stream(NULL), m_is(NULL), m_os(NULL)
+: m_is(NULL), m_os(NULL)
 {
 	CreateSvnStream();
 	Attach(stream);
 }
 
 Stream::Stream(std::ostream& stream)
-: m_stream(NULL), m_is(NULL), m_os(NULL)
+: m_is(NULL), m_os(NULL)
 {
 	CreateSvnStream();
 	Attach(stream);
 }
 
 Stream::Stream(std::iostream& stream)
-: m_stream(NULL), m_is(NULL), m_os(NULL)
+: m_is(NULL), m_os(NULL)
 {
 	CreateSvnStream();
 	Attach(stream);
@@ -33,8 +33,8 @@ Stream::Stream(std::iostream& stream)
 
 Stream::~Stream()
 {
-	if(m_stream)
-		svn_error_clear(svn_stream_close(m_stream)); //Ignore errors because destructor may not throw.
+	if(IsValid())
+		svn_error_clear(svn_stream_close(GetInternalObj())); //Ignore errors because destructor may not throw.
 }
 
 void Stream::Attach(std::iostream& stream)
@@ -46,23 +46,18 @@ void Stream::Attach(std::iostream& stream)
 void Stream::Attach(std::istream& stream)
 {
 	m_is = &stream;
-	svn_stream_set_read(m_stream, &Stream::OnSvnRead);
+	svn_stream_set_read(GetInternalObj(), &Stream::OnSvnRead);
 }
 
 void Stream::Attach(std::ostream& stream)
 {
 	m_os = &stream;
-	svn_stream_set_write(m_stream, &Stream::OnSvnWrite);
+	svn_stream_set_write(GetInternalObj(), &Stream::OnSvnWrite);
 }
 
 void Stream::CreateSvnStream()
 {
-	m_stream = svn_stream_create(this, m_Pool.pool());
-}
-
-svn_stream_t* Stream::GetInternalObj()
-{
-	return m_stream;
+	CLibSvnObjWrapper::Attach(svn_stream_create(this, pool()));
 }
 
 svn_error_t* Stream::OnSvnRead(void *baton,

@@ -2,14 +2,14 @@
 
 #include "svncpp/exception.hpp"
 #include "svncpp/pool.hpp"
-#include "svncpp/svn_general.hpp"
+#include "svncpp/general.hpp"
 #include <iostream>
 
 struct svn_stream_t;
 
 namespace svn{
 
-class Stream
+class Stream : public CLibSvnObjWrapper<svn_stream_t>
 {
 public:
 	Stream();
@@ -22,8 +22,6 @@ public:
 	void Attach(std::istream& stream);
 	void Attach(std::ostream& stream);
 
-	svn_stream_t*	GetInternalObj();
-
 private:
 
 	void CreateSvnStream();
@@ -35,12 +33,8 @@ private:
 								   const char *data,
 								   apr_size_t *len);
 
-	svn_stream_t* m_stream;
-
 	std::istream* m_is;
 	std::ostream* m_os;
-
-	Pool m_Pool;
 
 };
 
