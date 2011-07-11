@@ -1,4 +1,4 @@
-#include "svncpp/svn_general.hpp"
+#include "svncpp/general.hpp"
 #include "svncpp/url.hpp"
 #include "svn_io.h"
 

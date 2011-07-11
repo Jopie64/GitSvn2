@@ -204,6 +204,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ext\svncpp\src\general.cpp"
+				>
+			</File>
+			<File
 				RelativePath="ext\svncpp\src\info.cpp"
 				>
 			</File>
@@ -224,6 +228,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ext\svncpp\src\ra.cpp"
+				>
+			</File>
+			<File
 				RelativePath="ext\svncpp\src\revision.cpp"
 				>
 			</File>
@@ -237,10 +245,6 @@
 			</File>
 			<File
 				RelativePath=".\ext\svncpp\src\stream.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\ext\svncpp\src\svn_general.cpp"
 				>
 			</File>
 			<File
@@ -298,6 +302,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ext\svncpp\include\svncpp\general.hpp"
+				>
+			</File>
+			<File
 				RelativePath="ext\svncpp\include\svncpp\info.hpp"
 				>
 			</File>
@@ -326,6 +334,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ext\svncpp\include\svncpp\ra.hpp"
+				>
+			</File>
+			<File
 				RelativePath="ext\svncpp\include\svncpp\revision.hpp"
 				>
 			</File>
@@ -343,10 +355,6 @@
 			</File>
 			<File
 				RelativePath="ext\svncpp\include\svncpp\string_wrapper.hpp"
-				>
-			</File>
-			<File
-				RelativePath=".\ext\svncpp\include\svncpp\svn_general.hpp"
 				>
 			</File>
 			<File
