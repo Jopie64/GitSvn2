@@ -9,8 +9,8 @@
 #undef strncasecmp
 
 #include "svncpp\stream.hpp"
-#include "svncpp\pool.hpp"
 #include "svncpp\client.hpp"
+#include "svncpp\ra.hpp"
 using namespace std;
 
 extern svn::Client* G_svnClient;
@@ -18,13 +18,14 @@ extern svn::Client* G_svnClient;
 struct RevSyncCtxt
 {
 	typedef std::tr1::shared_ptr<Git::CTree> sharedTree;
-	RevSyncCtxt(Git::CRepo& gitRepo, const std::string& svnRepoUrl):m_gitRepo(gitRepo), m_svnRepoUrl(svnRepoUrl)
+	RevSyncCtxt(Git::CRepo& gitRepo, svn::Repo& svnRepo, const std::string& svnRepoUrl):m_gitRepo(gitRepo), m_svnRepo(svnRepo),m_svnRepoUrl(svnRepoUrl)
 	{
 		m_Tree_Meta		= m_rootTree.GetByPath("meta");
 		m_Tree_Content	= m_rootTree.GetByPath("content");
 	}
 
 	Git::CRepo& m_gitRepo;
+	svn::Repo&	m_svnRepo;
 	std::string m_svnRepoUrl;
 
 	Git::COid	m_lastCommit;
@@ -86,6 +87,7 @@ struct RevSyncCtxt
 				cout << text.str() << ": " << i->path << " ..." << flush;
 				std::ostringstream os;
 				G_svnClient->get(svn::Stream(os), m_svnRepoUrl + i->path, entry.revision);
+				m_svnRepo.getFile(svn::Stream(os), i->path, entry.revision);
 				m_Tree_Content->Insert(i->path.c_str(), m_gitRepo.WriteBlob(os.str()));
 			}
 			catch(svn::ClientException& e)
@@ -125,6 +127,8 @@ struct RevSyncCtxt
 void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char* refBaseName)
 {
 //	Git::CSignature sig("Johan", "johan@test.nl");
+	svn::Repo svnRepo(svnRepoUrl);
+
 	Git::CRepo gitRepo;
 	try
 	{
@@ -141,7 +145,7 @@ void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char
 
 	cout << "Fetching subversion log from " << svnRepoUrl << " ..." << endl;
 
-	RevSyncCtxt ctxt(gitRepo,svnRepoUrl);
+	RevSyncCtxt ctxt(gitRepo, svnRepo, svnRepoUrl);
 	//ctxt.CheckExistingRefs();
 
 	ctxt.m_csBaseRefName = refBaseName;
