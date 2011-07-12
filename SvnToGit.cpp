@@ -14,6 +14,7 @@
 using namespace std;
 
 extern svn::Client* G_svnClient;
+extern svn::Context* G_svnCtxt;
 
 struct RevSyncCtxt
 {
@@ -127,7 +128,7 @@ struct RevSyncCtxt
 void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char* refBaseName)
 {
 //	Git::CSignature sig("Johan", "johan@test.nl");
-	svn::Repo svnRepo(svnRepoUrl);
+	svn::Repo svnRepo(G_svnCtxt, svnRepoUrl);
 
 	Git::CRepo gitRepo;
 	try

@@ -1,66 +1,8 @@
 #include "svncpp/ra.hpp"
+#include "svncpp/context.hpp"
 
 namespace svn
 {
-static svn_error_t* racb_get_wc_prop(void *baton,
-                                          const char *relpath,
-                                          const char *name,
-                                          const svn_string_t **value,
-                                          apr_pool_t *pool)
-{
-	return NULL;
-}
-
-static svn_error_t* racb_set_wc_prop(void *baton,
-                                          const char *path,
-                                          const char *name,
-                                          const svn_string_t *value,
-                                          apr_pool_t *pool)
-{
-	return NULL;
-}
-
-
-static svn_error_t* racb_push_wc_prop(void *baton,
-                                           const char *path,
-                                           const char *name,
-                                           const svn_string_t *value,
-                                           apr_pool_t *pool)
-{
-	return NULL;
-}
-
-
-static svn_error_t* racb_invalidate_wc_props(void *baton,
-                                                  const char *path,
-                                                  const char *name,
-                                                  apr_pool_t *pool)
-{
-	return NULL;
-}
-
-
-void racb_progress_notify(apr_off_t progress,
-                                      apr_off_t total,
-                                      void *baton,
-                                      apr_pool_t *pool)
-{
-}
-
-
-static svn_ra_callbacks2_t initCallbacks()
-{
-	svn_ra_callbacks2_t cb;
-	memset(&cb, 0, sizeof(cb));
-
-	cb.get_wc_prop			= &racb_get_wc_prop;
-	cb.set_wc_prop			= &racb_set_wc_prop;
-	cb.push_wc_prop			= &racb_push_wc_prop;
-	cb.invalidate_wc_props	= &racb_invalidate_wc_props;
-	cb.progress_func		= &racb_progress_notify;
-
-	return cb;
-}
 
 class RaInit
 {
@@ -72,13 +14,16 @@ public:
 	Pool m_pool;
 };
 
-Repo::Repo(const char * repos_URL,
+Repo::Repo(svn::Context* ctxt,
+		   const char * repos_URL,
 		   const char * uuid)
 {
 	static RaInit init;
-	static svn_ra_callbacks2_t callbacks = initCallbacks();
+	svn_ra_callbacks2_t* callbacks = NULL;
 	svn_ra_session_t * ses = NULL;
-	ThrowIfError(svn_ra_open3(&ses, repos_URL, uuid, &callbacks, this, NULL, pool()));
+	ThrowIfError(svn_ra_create_callbacks(&callbacks, pool()));
+	callbacks->auth_baton = ctxt->ctx()->auth_baton;
+	ThrowIfError(svn_ra_open3(&ses, repos_URL, uuid, callbacks, this, NULL, pool()));
 	Attach(ses);
 }
 

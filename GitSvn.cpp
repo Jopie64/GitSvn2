@@ -24,8 +24,8 @@ using namespace std;
 #pragma comment(lib, "ext\\svn\\lib\\libsvn_wc-1.lib")
 #pragma comment(lib, "ext\\svn\\lib\\libsvn_subr-1.lib")
 #pragma comment(lib, "ext\\svn\\lib\\libsvn_ra-1.lib")
-#pragma comment(lib, "ext\\svn\\lib\\libsvn_ra_local-1.lib")
-#pragma comment(lib, "ext\\svn\\lib\\libsvn_ra_svn-1.lib")
+//#pragma comment(lib, "ext\\svn\\lib\\libsvn_ra_local-1.lib")
+//#pragma comment(lib, "ext\\svn\\lib\\libsvn_ra_svn-1.lib")
 #pragma comment(lib, "ext\\svn\\lib\\apr\\libapr-1.lib")
 #pragma comment(lib, "ext\\svn\\lib\\apr-util\\libaprutil-1.lib")
 

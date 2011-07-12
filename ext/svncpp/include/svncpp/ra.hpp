@@ -11,7 +11,8 @@ namespace svn
 class Repo : public CLibSvnObjWrapper<svn_ra_session_t>
 {
 public:
-	Repo(const char * repos_URL,
+	Repo(class Context* ctxt,
+		 const char * repos_URL,
 		 const char * uuid = NULL);
 
 	std::string getRoot() const;
