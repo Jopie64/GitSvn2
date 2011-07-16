@@ -28,6 +28,7 @@
 // stl
 #include "svncpp/string_wrapper.hpp"
 #include <list>
+#include <functional>
 
 // apr
 #include "apr_time.h"
@@ -68,7 +69,12 @@ public:
     std::list<LogChangePathEntry> changedPaths;
     apr_time_t date;
   };
+
+  typedef std::tr1::function<void (LogEntry& entry)> LogEntryCb;
 }
+
+
+
 
 #endif
 /* -----------------------------------------------------------------

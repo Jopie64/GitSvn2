@@ -1,5 +1,7 @@
 #include "svncpp/ra.hpp"
 #include "svncpp/context.hpp"
+#include "svncpp/targets.hpp"
+#include "log_receiver.hpp"
 
 namespace svn
 {
@@ -54,6 +56,33 @@ void Repo::getFile(Stream & dst,
 	svn_revnum_t fetchedRev = 0;
 	apr_hash_t* props = NULL;
 	ThrowIfError(svn_ra_get_file(GetInternalObj(), path.c_str(), revision, dst.GetInternalObj(), &fetchedRev, &props, pool));
+}
+
+
+
+void Repo::log(const LogEntryCb& cb,
+		  const char * path,
+		  const Revision & revisionStart,
+		  const Revision & revisionEnd,
+		  bool discoverChangedPaths,
+		  bool strictNodeHistory) throw(ClientException)
+{
+	Pool pool;
+	Targets target(path);
+	LogReceiver recv;
+	recv.m_cb = cb;
+	int limit = 0;
+
+	ThrowIfError(svn_ra_get_log(GetInternalObj(),
+								 NULL,
+								 revisionStart,
+								 revisionEnd,
+								 limit,
+								 discoverChangedPaths ? 1 : 0,
+								 strictNodeHistory ? 1 : 0,
+								 &LogReceiver::receive_s,
+								 &recv,
+								 pool));
 }
 
 } //namespace svn

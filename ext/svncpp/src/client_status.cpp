@@ -42,69 +42,10 @@
 #include "svncpp/status.hpp"
 #include "svncpp/targets.hpp"
 #include "svncpp/url.hpp"
+#include "log_receiver.hpp"
 
 namespace svn
 {
-  struct LogReceiver
-  {
-	  Client::LogEntryCb m_cb;
-
-	  static svn_error_t *
-	  receive_s(void *baton,
-				  apr_hash_t * changedPaths,
-				  svn_revnum_t rev,
-				  const char *author,
-				  const char *date,
-				  const char *msg,
-				  apr_pool_t * pool)
-	  {
-		  try
-		  {
-			  ((LogReceiver*)baton)->receive(changedPaths, rev, author, date, msg, pool);
-		  }
-		  catch(ClientException& e)
-		  {
-			  return e.detach();
-		  }
-		  return NULL;
-	  }
-
-	  void
-	  receive(
-				  apr_hash_t * changedPaths,
-				  svn_revnum_t rev,
-				  const char *author,
-				  const char *date,
-				  const char *msg,
-				  apr_pool_t * pool)
-	  {
-		LogEntry entry(rev, author, date, msg);
-
-		if (changedPaths != NULL)
-		{
-
-		  for (apr_hash_index_t *hi = apr_hash_first(pool, changedPaths);
-			   hi != NULL;
-			   hi = apr_hash_next(hi))
-		  {
-			char *path;
-			void *val;
-			apr_hash_this(hi, (const void **)&path, NULL, &val);
-
-			svn_log_changed_path_t *log_item = reinterpret_cast<svn_log_changed_path_t *>(val);
-
-			entry.changedPaths.push_back(
-			  LogChangePathEntry(path,
-								 log_item->action,
-								 log_item->copyfrom_path,
-								 log_item->copyfrom_rev));
-		  }
-		}
-
-		m_cb(entry);
-	  }
-
-  };
 
   static void
   statusEntriesFunc(void *baton,

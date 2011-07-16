@@ -216,6 +216,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ext\svncpp\src\log_receiver.hpp"
+				>
+			</File>
+			<File
 				RelativePath="ext\svncpp\src\path.cpp"
 				>
 			</File>

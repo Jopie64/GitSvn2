@@ -522,8 +522,6 @@ public:
         bool discoverChangedPaths = false,
         bool strictNodeHistory = true) throw(ClientException);
 
-	typedef std::tr1::function<void (LogEntry& entry)> LogEntryCb;
-
 	void
     log(const LogEntryCb& cb,
 		const char * path,

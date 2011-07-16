@@ -150,7 +150,8 @@ void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char
 	//ctxt.CheckExistingRefs();
 
 	ctxt.m_csBaseRefName = refBaseName;
-	G_svnClient->log(std::tr1::bind(&RevSyncCtxt::OnSvnLogEntry, &ctxt, std::tr1::placeholders::_1),
+	//G_svnClient->log(std::tr1::bind(&RevSyncCtxt::OnSvnLogEntry, &ctxt, std::tr1::placeholders::_1),
+	svnRepo.log(std::tr1::bind(&RevSyncCtxt::OnSvnLogEntry, &ctxt, std::tr1::placeholders::_1),
 					 svnRepoUrl,
 					 svn::Revision::START,
 					 svn::Revision::HEAD,
