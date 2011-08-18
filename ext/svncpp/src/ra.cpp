@@ -53,9 +53,14 @@ void Repo::getFile(Stream & dst,
 				   const Revision & peg_revision) throw(ClientException)
 {
 	Pool pool;
-	svn_revnum_t fetchedRev = 0;
+	//svn_revnum_t fetchedRev = 0;
 	apr_hash_t* props = NULL;
-	ThrowIfError(svn_ra_get_file(GetInternalObj(), path.c_str(), revision, dst.GetInternalObj(), &fetchedRev, &props, pool));
+	const char* fileName = path.c_str();
+	while(*fileName == '/')
+		++fileName;
+	ThrowIfError(svn_ra_get_file(GetInternalObj(), fileName, revision, dst.GetInternalObj(), NULL, &props, pool));
+	//ThrowIfError(svn_ra_get_file(GetInternalObj(), path.c_str(), revision, NULL, NULL, &props, pool));
+	//ThrowIfError(svn_ra_get_file(GetInternalObj(), "trunk/file1.txt", revision, NULL, NULL, &props, pool));
 }
 
 

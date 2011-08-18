@@ -43,6 +43,7 @@ namespace svn
   Revision::Revision(const svn_revnum_t revnum)
   {
     m_revision.kind = svn_opt_revision_number;
+	m_revision.value.date = 0; //To set the whole thing to zero first
     m_revision.value.number = revnum;
   }
 
