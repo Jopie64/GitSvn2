@@ -19,7 +19,7 @@ extern svn::Context* G_svnCtxt;
 struct RevSyncCtxt
 {
 	typedef std::tr1::shared_ptr<Git::CTree> sharedTree;
-	RevSyncCtxt(Git::CRepo& gitRepo, svn::Repo& svnRepo, const std::string& svnRepoUrl):m_gitRepo(gitRepo), m_svnRepo(svnRepo),m_svnRepoUrl(svnRepoUrl)
+	RevSyncCtxt(Git::CRepo& gitRepo, svn::Repo& svnRepo, svn::Repo& svnRepo2, const std::string& svnRepoUrl):m_gitRepo(gitRepo), m_svnRepo(svnRepo), m_svnRepo2(svnRepo2), m_svnRepoUrl(svnRepoUrl)
 	{
 		m_Tree_Meta		= m_rootTree.GetByPath("meta");
 		m_Tree_Content	= m_rootTree.GetByPath("content");
@@ -27,6 +27,7 @@ struct RevSyncCtxt
 
 	Git::CRepo& m_gitRepo;
 	svn::Repo&	m_svnRepo;
+	svn::Repo&	m_svnRepo2;
 	std::string m_svnRepoUrl;
 
 	Git::COid	m_lastCommit;
@@ -68,6 +69,64 @@ struct RevSyncCtxt
 		return src;
 	}
 
+	static svn_error_t* Replay_open_root(void *edit_baton,
+                            svn_revnum_t base_revision,
+                            apr_pool_t *result_pool,
+                            void **root_baton)
+	{
+		cout << "Opening root! " << base_revision << endl;
+		return NULL;
+	}
+	static svn_error_t *Replay_add_file
+						  (const char *path,
+						   void *parent_baton,
+						   const char *copyfrom_path,
+						   svn_revnum_t copyfrom_revision,
+						   apr_pool_t *result_pool,
+						   void **file_baton)
+	{
+		cout << "Yeah! Adding file " << path << "..." << endl;
+		if(copyfrom_path)
+			cout << "-- Copied from " << copyfrom_path << "@" << copyfrom_revision << endl;
+		return NULL;
+	}
+
+	static svn_error_t *Replay_open_file(
+							const char *path,
+							void *parent_baton,
+							svn_revnum_t base_revision,
+							apr_pool_t *result_pool,
+							void **file_baton)
+	{
+		cout << "Opening file " << path << "@" << base_revision << "..." << endl;
+		*file_baton = (char*)path;
+		return NULL;
+	}
+
+	static svn_error_t *Replay_delta_window(svn_txdelta_window_t *window, void *baton)
+	{
+		if(!window)
+		{
+			cout << "Data ended..." << endl;
+			return NULL;
+		}
+		cout << "Received some delta!!" << endl;
+		cout.write(window->new_data->data, window->new_data->len);
+		return NULL;
+	}
+
+	static svn_error_t *Replay_apply_textdelta(
+								  void *file_baton,
+								  const char *base_checksum,
+								  apr_pool_t *result_pool,
+								  svn_txdelta_window_handler_t *handler,
+								  void **handler_baton)
+	{
+		cout << "Applying text delta..." << endl;
+		*handler = Replay_delta_window;
+		return NULL;
+	}
+
 	void OnSvnLogEntry(const svn::LogEntry& entry)
 	{
 		if(entry.revision == 0)
@@ -79,26 +138,39 @@ struct RevSyncCtxt
 		
 		cout << text.str() << "..." << flush;
 
+		svn::Pool pool;
+		svn_delta_editor_t* editor	= svn_delta_default_editor(pool);
+		editor->open_root			= Replay_open_root;
+		editor->add_file			= Replay_add_file;
+		editor->open_file			= Replay_open_file;
+		editor->apply_textdelta		= Replay_apply_textdelta;
+
+		svn_ra_replay(m_svnRepo.GetInternalObj(), entry.revision, 0, true, editor, (void*)10, pool);
 
 		//Git::CTreeBuilder treeB(&*m_lastTree);
-		for(std::list<svn::LogChangePathEntry>::const_iterator i = entry.changedPaths.begin(); i != entry.changedPaths.end(); ++i)
+/*		for(std::list<svn::LogChangePathEntry>::const_iterator i = entry.changedPaths.begin(); i != entry.changedPaths.end(); ++i)
 		{
 			try
 			{
 				cout << text.str() << ": " << i->path << " ..." << flush;
 				std::ostringstream os;
-				G_svnClient->get(svn::Stream(os), m_svnRepoUrl + i->path, entry.revision);
-				m_svnRepo.getFile(svn::Stream(os), i->path, entry.revision);
+				//G_svnClient->get(svn::Stream(os), m_svnRepoUrl + i->path, entry.revision);
+				m_svnRepo.getFile(svn::Stream(os), i->path.substr(1), entry.revision);
 				m_Tree_Content->Insert(i->path.c_str(), m_gitRepo.WriteBlob(os.str()));
 			}
 			catch(svn::ClientException& e)
 			{
 				if(e.apr_err() == SVN_ERR_CLIENT_IS_DIRECTORY)
 					cout << "jay!" << endl;
+				else if(e.apr_err() == SVN_ERR_FS_NOT_FILE)
+					cout << "jay2!" << endl;
+				else if(e.apr_err() == SVN_ERR_FS_NOT_FOUND)
+					cout << "Huh? " << e.message() << endl;
 				else
 					cout << "Oops: " << e.message() << endl;
 			}
 		}
+*/
 
 		Git::CTree tree(m_gitRepo, m_rootTree.Write(m_gitRepo));
 
@@ -128,7 +200,11 @@ struct RevSyncCtxt
 void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char* refBaseName)
 {
 //	Git::CSignature sig("Johan", "johan@test.nl");
-	svn::Repo svnRepo(G_svnCtxt, svnRepoUrl);
+	svn::Context* W_Context2Ptr = new svn::Context();
+	svn::Repo svnRepo(W_Context2Ptr, svnRepoUrl);
+	svn::Repo svnRepo2(new svn::Context(), svnRepoUrl);
+
+	//svn::Repo svnRepo(G_svnCtxt, svnRepoUrl);
 
 	Git::CRepo gitRepo;
 	try
@@ -146,7 +222,7 @@ void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char
 
 	cout << "Fetching subversion log from " << svnRepoUrl << " ..." << endl;
 
-	RevSyncCtxt ctxt(gitRepo, svnRepo, svnRepoUrl);
+	RevSyncCtxt ctxt(gitRepo, svnRepo, svnRepo2, svnRepoUrl);
 	//ctxt.CheckExistingRefs();
 
 	ctxt.m_csBaseRefName = refBaseName;
