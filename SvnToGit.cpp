@@ -10,7 +10,7 @@
 
 #include "svncpp\stream.hpp"
 #include "svncpp\client.hpp"
-#include "svncpp\delta.hpp"
+#include "svncpp\replay.hpp"
 using namespace std;
 
 extern svn::Client* G_svnClient;
@@ -138,14 +138,15 @@ struct RevSyncCtxt
 		
 		cout << text.str() << "..." << flush;
 
-		svn::Pool pool;
+/*		svn::Pool pool;
 		svn_delta_editor_t* editor	= svn_delta_default_editor(pool);
 		editor->open_root			= Replay_open_root;
 		editor->add_file			= Replay_add_file;
 		editor->open_file			= Replay_open_file;
 		editor->apply_textdelta		= Replay_apply_textdelta;
-
-		svn_ra_replay(m_svnRepo.GetInternalObj(), entry.revision, 0, true, editor, (void*)10, pool);
+*/
+		svn::replay::Editor editor;
+		svn_ra_replay(m_svnRepo.GetInternalObj(), entry.revision, 0, true, editor.GetInternalObj(), (void*)&editor, editor.pool());
 
 		//Git::CTreeBuilder treeB(&*m_lastTree);
 /*		for(std::list<svn::LogChangePathEntry>::const_iterator i = entry.changedPaths.begin(); i != entry.changedPaths.end(); ++i)

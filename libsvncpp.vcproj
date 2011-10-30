@@ -236,6 +236,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ext\svncpp\src\replay.cpp"
+				>
+			</File>
+			<File
 				RelativePath="ext\svncpp\src\revision.cpp"
 				>
 			</File>
@@ -339,6 +343,10 @@
 			</File>
 			<File
 				RelativePath=".\ext\svncpp\include\svncpp\ra.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\ext\svncpp\include\svncpp\replay.hpp"
 				>
 			</File>
 			<File

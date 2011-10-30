@@ -37,4 +37,13 @@ protected:
 	mutable shared_pool	m_pool;
 };
 
+class Uncopyable
+{
+public:
+	Uncopyable(){}
+private:
+	Uncopyable(const Uncopyable&);
+	Uncopyable& operator=(const Uncopyable&);
+};
+
 } //namespace svn
