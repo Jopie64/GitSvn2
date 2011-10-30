@@ -16,6 +16,9 @@ using namespace std;
 extern svn::Client* G_svnClient;
 extern svn::Context* G_svnCtxt;
 
+using namespace svn::replay;
+
+
 struct RevSyncCtxt
 {
 	typedef std::tr1::shared_ptr<Git::CTree> sharedTree;
@@ -68,6 +71,41 @@ struct RevSyncCtxt
 			src = src.substr(pos);
 		return src;
 	}
+
+	class ReplayFile : public File
+	{
+	public:
+	};
+
+	class ReplayDir : public Directory
+	{
+		virtual File* addFile(const char* path, const char* copyfrom_path, const svn::Revision& copyfrom_revision)
+		{
+			return new ReplayFile;
+		}
+
+		virtual Directory* add(const char* path, const char* copyfrom_path, const svn::Revision& copyfrom_revision)
+		{
+			return new ReplayDir;
+		}
+
+		virtual Directory* open(const char* path, const svn::Revision& base_revision)
+		{
+			return new ReplayDir;
+		}
+
+		virtual void	   deleteEntry(const char* path, const svn::Revision& revision)
+		{
+		}
+
+	};
+
+	class ReplayEditor : public Editor
+	{
+	public:
+		Directory* openRoot(const svn::Revision& base_revision){ return new ReplayDir; }
+	};
+
 
 	static svn_error_t* Replay_open_root(void *edit_baton,
                             svn_revnum_t base_revision,
@@ -145,8 +183,9 @@ struct RevSyncCtxt
 		editor->open_file			= Replay_open_file;
 		editor->apply_textdelta		= Replay_apply_textdelta;
 */
-		svn::replay::Editor editor;
-		svn_ra_replay(m_svnRepo.GetInternalObj(), entry.revision, 0, true, editor.GetInternalObj(), (void*)&editor, editor.pool());
+		ReplayEditor editor;
+		editor.replay(&m_svnRepo, entry.revision, svn::Revision(), true);
+		//svn_ra_replay(m_svnRepo.GetInternalObj(), entry.revision, 0, true, editor.GetInternalObj(), (void*)&editor, editor.pool());
 
 		//Git::CTreeBuilder treeB(&*m_lastTree);
 /*		for(std::list<svn::LogChangePathEntry>::const_iterator i = entry.changedPaths.begin(); i != entry.changedPaths.end(); ++i)
