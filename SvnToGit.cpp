@@ -10,7 +10,7 @@
 
 #include "svncpp\stream.hpp"
 #include "svncpp\client.hpp"
-#include "svncpp\ra.hpp"
+#include "svncpp\delta.hpp"
 using namespace std;
 
 extern svn::Client* G_svnClient;
