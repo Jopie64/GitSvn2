@@ -75,22 +75,34 @@ struct RevSyncCtxt
 	class ReplayFile : public File
 	{
 	public:
+		virtual ApplyDeltaHandler* applyDelta(const char* baseChecksum)
+		{
+			return new ApplyDeltaHandler();
+		}
+
 	};
 
 	class ReplayDir : public Directory
 	{
 		virtual File* addFile(const char* path, const char* copyfrom_path, const svn::Revision& copyfrom_revision)
 		{
+			cout << "Yeah! Adding file " << path << "..." << endl;
+			if(copyfrom_path)
+				cout << "-- Copied from " << copyfrom_path << "@" << copyfrom_revision << endl;
 			return new ReplayFile;
 		}
 
 		virtual Directory* add(const char* path, const char* copyfrom_path, const svn::Revision& copyfrom_revision)
 		{
+			cout << "Yeah! Adding dir " << path << "..." << endl;
+			if(copyfrom_path)
+				cout << "-- Copied from " << copyfrom_path << "@" << copyfrom_revision << endl;
 			return new ReplayDir;
 		}
 
 		virtual Directory* open(const char* path, const svn::Revision& base_revision)
 		{
+			cout << "Opening file " << path << "@" << base_revision << "..." << endl;
 			return new ReplayDir;
 		}
 
@@ -103,7 +115,11 @@ struct RevSyncCtxt
 	class ReplayEditor : public Editor
 	{
 	public:
-		Directory* openRoot(const svn::Revision& base_revision){ return new ReplayDir; }
+		Directory* openRoot(const svn::Revision& base_revision)
+		{
+			cout << "Opening root! " << base_revision << endl;
+			return new ReplayDir;
+		}
 	};
 
 

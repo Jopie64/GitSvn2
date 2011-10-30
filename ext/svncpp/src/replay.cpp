@@ -29,6 +29,12 @@ void Editor::replay(Repo* repo,
 	ThrowIfError(svn_ra_replay(repo->GetInternalObj(), revision, low_water_mark, send_deltas, GetInternalObj(), this, pool()));
 }
 
+
+ApplyDeltaHandler::ApplyDeltaHandler()
+:	m_file(NULL)
+{
+}
+
 namespace callbacks
 {
 
@@ -170,6 +176,42 @@ svn_error_t *close_file (void *file_baton,
 	delete file;
 	return NULL;
 }
+
+
+svn_error_t *ApplyDeltaHandler_txdelta_window_handler_t(svn_txdelta_window_t *window, void *baton)
+{
+	ApplyDeltaHandler* handler = (ApplyDeltaHandler*)baton;
+	try
+	{
+		if(!window)
+			delete handler;
+		else if(handler)
+			handler->handleWindow(window);
+	}
+	catch(svn::ClientException& e){ return e.detach(); }
+	return NULL;
+}
+
+svn_error_t *apply_textdelta (void *file_baton,
+							  const char *base_checksum,
+							  apr_pool_t *result_pool,
+							  svn_txdelta_window_handler_t *handler,
+							  void **handler_baton)
+{
+	File* file = (File*)file_baton;
+	try
+	{
+		ApplyDeltaHandler* dhandler	= file->applyDelta(base_checksum);
+		dhandler->m_file			= file;
+		*handler					= &ApplyDeltaHandler_txdelta_window_handler_t;
+		*handler_baton				= dhandler;
+	}
+	catch(svn::ClientException& e){ return e.detach(); }
+
+	return NULL;
+
+}
+
 #if 0
 
 	/** Change the value of a directory's property.
@@ -220,35 +262,6 @@ svn_error_t *close_file (void *file_baton,
 							svn_revnum_t base_revision,
 							apr_pool_t *result_pool,
 							void **file_baton);
-
-	/** Apply a text delta, yielding the new revision of a file.
-	*
-	* @a file_baton indicates the file we're creating or updating, and the
-	* ancestor file on which it is based; it is the baton set by some
-	* prior @c add_file or @c open_file callback.
-	*
-	* The callback should set @a *handler to a text delta window
-	* handler; we will then call @a *handler on successive text
-	* delta windows as we receive them.  The callback should set
-	* @a *handler_baton to the value we should pass as the @a baton
-	* argument to @a *handler. These values should be allocated within
-	* @a result_pool.
-	*
-	* @a base_checksum is the hex MD5 digest for the base text against
-	* which the delta is being applied; it is ignored if NULL, and may
-	* be ignored even if not NULL.  If it is not ignored, it must match
-	* the checksum of the base text against which svndiff data is being
-	* applied; if it does not, @c apply_textdelta or the @a *handler call
-	* which detects the mismatch will return the error
-	* SVN_ERR_CHECKSUM_MISMATCH (if there is no base text, there may
-	* still be an error if @a base_checksum is neither NULL nor the hex
-	* MD5 checksum of the empty string).
-	*/
-	svn_error_t *(*apply_textdelta)(void *file_baton,
-								  const char *base_checksum,
-								  apr_pool_t *result_pool,
-								  svn_txdelta_window_handler_t *handler,
-								  void **handler_baton);
 
 	/** Change the value of a file's property.
 	* - @a file_baton specifies the file whose property should change.
@@ -307,6 +320,7 @@ void SetCallbacks(svn_delta_editor_t* ed)
 	ed->delete_entry		= &delete_entry;
 	ed->add_file			= &add_file;
 	ed->close_file			= &close_file;
+	ed->apply_textdelta		= &apply_textdelta;
 }
 
 }//callbacks

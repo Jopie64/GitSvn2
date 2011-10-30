@@ -33,10 +33,20 @@ public:
 	virtual void	   deleteEntry(const char* path, const Revision& revision) =0;
 };
 
+class ApplyDeltaHandler
+{
+public:
+	ApplyDeltaHandler();
+	void handleWindow(svn_txdelta_window_t *window){}
+
+	File* m_file;
+};
+
 class File : public DirEntry
 {
 public:
-	virtual void onClose(const char* checksum){}
+	virtual ApplyDeltaHandler*	applyDelta(const char* baseChecksum){ return NULL; }
+	virtual void				onClose(const char* checksum){}
 };
 
 class Editor : public CLibSvnObjWrapper<svn_delta_editor_t>, Uncopyable
