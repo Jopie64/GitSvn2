@@ -22,10 +22,11 @@ Editor::~Editor(void)
 
 
 void Editor::replay(Repo* repo,
-					const Revision& revision,
-					const Revision& low_water_mark,
+					svn_revnum_t revision,
+					svn_revnum_t low_water_mark,
 					svn_boolean_t send_deltas)
 {
+	
 	ThrowIfError(svn_ra_replay(repo->GetInternalObj(), revision, low_water_mark, send_deltas, GetInternalObj(), this, pool()));
 }
 
@@ -166,6 +167,28 @@ svn_error_t *add_file (const char *path,
 	return NULL;
 }
 
+svn_error_t *open_file (const char *path,
+						void *parent_baton,
+						svn_revnum_t base_revision,
+						apr_pool_t *result_pool,
+						void **file_baton)
+{
+	Directory* parent = (Directory*)parent_baton;
+	try
+	{
+		File* newFile = parent->openFile(path, base_revision);
+		if(newFile)
+		{
+			newFile->m_name		= path;
+			newFile->m_parent	= parent;
+			newFile->m_editor	= parent->m_editor;
+		}
+		*file_baton = newFile;
+	}
+	catch(svn::ClientException& e){ return e.detach(); }
+	return NULL;
+}
+
 svn_error_t *close_file (void *file_baton,
 						 const char *text_checksum,
 						 apr_pool_t *scratch_pool)
@@ -209,8 +232,8 @@ svn_error_t *apply_textdelta (void *file_baton,
 	catch(svn::ClientException& e){ return e.detach(); }
 
 	return NULL;
-
 }
+
 
 #if 0
 
@@ -242,26 +265,6 @@ svn_error_t *apply_textdelta (void *file_baton,
 								   void *parent_baton,
 								   apr_pool_t *scratch_pool);
 
-	/** We are going to make change to a file named @a path, which resides
-	* in the directory identified by @a parent_baton.
-	*
-	* The callback can store a baton for this new file in @a **file_baton;
-	* whatever value it stores there should be passed through to
-	* @c apply_textdelta.  If a valid revnum, @a base_revision is the
-	* current revision of the file.
-	*
-	* Allocations for the returned @a file_baton should be performed in
-	* @a result_pool. It is also typical to save this pool for later usage
-	* by @c apply_textdelta and possibly @c close_file.
-	*
-	* @note See note about memory usage on @a add_file, which also
-	* applies here.
-	*/
-	svn_error_t *(*open_file)(const char *path,
-							void *parent_baton,
-							svn_revnum_t base_revision,
-							apr_pool_t *result_pool,
-							void **file_baton);
 
 	/** Change the value of a file's property.
 	* - @a file_baton specifies the file whose property should change.
@@ -319,6 +322,7 @@ void SetCallbacks(svn_delta_editor_t* ed)
 	ed->open_directory		= &open_directory;
 	ed->delete_entry		= &delete_entry;
 	ed->add_file			= &add_file;
+	ed->open_file			= &open_file;
 	ed->close_file			= &close_file;
 	ed->apply_textdelta		= &apply_textdelta;
 }

@@ -30,6 +30,7 @@ public:
 	virtual Directory* add(const char* path, const char* copyfrom_path, const Revision& copyfrom_revision) =0;
 	virtual File*	   addFile(const char* path, const char* copyfrom_path, const Revision& copyfrom_revision) =0;
 	virtual Directory* open(const char* path, const Revision& base_revision) =0;
+	virtual File*	   openFile(const char* path, const Revision& base_revision) =0;
 	virtual void	   deleteEntry(const char* path, const Revision& revision) =0;
 };
 
@@ -59,8 +60,8 @@ public:
 	virtual Directory*	openRoot(const Revision& base_revision) =0;
 
 	void replay(  Repo* repo,
-				  const Revision& revision,
-				  const Revision& low_water_mark,
+				  svn_revnum_t revision,
+				  svn_revnum_t low_water_mark,
 				  svn_boolean_t send_deltas);
 
 	Revision m_TargetRevision;
