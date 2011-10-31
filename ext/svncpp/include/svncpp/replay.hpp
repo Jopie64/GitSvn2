@@ -13,13 +13,14 @@ class File;
 class DirEntry
 {
 public:
-	DirEntry():m_parent(NULL), m_editor(NULL){}
+	DirEntry():m_parent(NULL), m_editor(NULL), m_new(false){}
 	virtual ~DirEntry(){}
 
-	DirEntry(const char* name, Directory* parent, Editor* editor):m_parent(parent), m_name(name), m_editor(editor){}
+	DirEntry(const char* name, Directory* parent, Editor* editor):m_parent(parent), m_name(name), m_editor(editor), m_new(false){}
 
-	virtual void OnInit(){}
+	virtual void onInit(){}
 
+	bool		m_new;
 	std::string	m_name;
 	Directory*	m_parent;
 	Editor*		m_editor;
@@ -29,18 +30,19 @@ class Directory : public DirEntry
 {
 public:
 
-	virtual Directory* add(const char* path, const char* copyfrom_path, const Revision& copyfrom_revision) =0;
-	virtual File*	   addFile(const char* path, const char* copyfrom_path, const Revision& copyfrom_revision) =0;
-	virtual Directory* open(const char* path, const Revision& base_revision) =0;
-	virtual File*	   openFile(const char* path, const Revision& base_revision) =0;
-	virtual void	   deleteEntry(const char* path, const Revision& revision) =0;
+	virtual Directory* add(const char* path, const char* copyfrom_path, svn_revnum_t copyfrom_revision) =0;
+	virtual File*	   addFile(const char* path, const char* copyfrom_path, svn_revnum_t copyfrom_revision) =0;
+	virtual Directory* open(const char* path, svn_revnum_t base_revision) =0;
+	virtual File*	   openFile(const char* path, svn_revnum_t base_revision) =0;
+	virtual void	   deleteEntry(const char* path, svn_revnum_t revision) =0;
 };
 
 class ApplyDeltaHandler
 {
 public:
 	ApplyDeltaHandler();
-	void handleWindow(svn_txdelta_window_t *window){}
+	virtual void handleWindow(svn_txdelta_window_t *window)=0;
+	virtual void onClose(){}
 
 	File* m_file;
 };
@@ -58,15 +60,15 @@ public:
 	Editor(void);
 	virtual ~Editor(void);
 
-	virtual void		onTargetRevision(const Revision& target_revision){}
-	virtual Directory*	openRoot(const Revision& base_revision) =0;
+	virtual void		onTargetRevision(svn_revnum_t target_revision){}
+	virtual Directory*	openRoot(svn_revnum_t base_revision) =0;
 
 	void replay(  Repo* repo,
 				  svn_revnum_t revision,
 				  svn_revnum_t low_water_mark,
 				  svn_boolean_t send_deltas);
 
-	Revision m_TargetRevision;
+	svn_revnum_t m_TargetRevision;
 };
 
 

@@ -10,6 +10,7 @@ void SetCallbacks(svn_delta_editor_t* ed);
 }
 
 Editor::Editor(void)
+:	m_TargetRevision(0)
 {
 	svn_delta_editor_t* ed = svn_delta_default_editor(pool());
 	Attach(ed);
@@ -66,7 +67,7 @@ svn_error_t *open_root(void *edit_baton,
 		if(newDir)
 		{
 			newDir->m_editor	= pthis;
-			newDir->OnInit();
+			newDir->onInit();
 		}
 		*root_baton = newDir;
 	}
@@ -100,7 +101,8 @@ svn_error_t *add_directory (const char *path,
 			newDir->m_name		= path;
 			newDir->m_parent	= parent;
 			newDir->m_editor	= parent->m_editor;
-			newDir->OnInit();
+			newDir->m_new		= true;
+			newDir->onInit();
 		}
 		*child_baton = newDir;
 	}
@@ -124,7 +126,7 @@ svn_error_t *open_directory (const char *path,
 			newDir->m_name		= path;
 			newDir->m_parent	= parent;
 			newDir->m_editor	= parent->m_editor;
-			newDir->OnInit();
+			newDir->onInit();
 		}
 		*child_baton = newDir;
 	}
@@ -163,7 +165,8 @@ svn_error_t *add_file (const char *path,
 			newFile->m_name		= path;
 			newFile->m_parent	= parent;
 			newFile->m_editor	= parent->m_editor;
-			newFile->OnInit();
+			newFile->m_new		= true;
+			newFile->onInit();
 		}
 		*file_baton = newFile;
 	}
@@ -186,7 +189,7 @@ svn_error_t *open_file (const char *path,
 			newFile->m_name		= path;
 			newFile->m_parent	= parent;
 			newFile->m_editor	= parent->m_editor;
-			newFile->OnInit();
+			newFile->onInit();
 		}
 		*file_baton = newFile;
 	}
@@ -211,10 +214,16 @@ svn_error_t *ApplyDeltaHandler_txdelta_window_handler_t(svn_txdelta_window_t *wi
 	ApplyDeltaHandler* handler = (ApplyDeltaHandler*)baton;
 	try
 	{
-		if(!window)
-			delete handler;
-		else if(handler)
-			handler->handleWindow(window);
+		if(handler)
+		{
+			if(!window)
+			{
+				handler->onClose();				
+				delete handler;
+			}
+			else
+				handler->handleWindow(window);
+		}
 	}
 	catch(svn::ClientException& e){ return e.detach(); }
 	return NULL;
@@ -230,8 +239,11 @@ svn_error_t *apply_textdelta (void *file_baton,
 	try
 	{
 		ApplyDeltaHandler* dhandler	= file->applyDelta(base_checksum);
-		dhandler->m_file			= file;
-		*handler					= &ApplyDeltaHandler_txdelta_window_handler_t;
+		if(dhandler)
+		{
+			dhandler->m_file			= file;
+			*handler					= &ApplyDeltaHandler_txdelta_window_handler_t;
+		}
 		*handler_baton				= dhandler;
 	}
 	catch(svn::ClientException& e){ return e.detach(); }
