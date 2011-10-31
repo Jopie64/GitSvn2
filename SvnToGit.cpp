@@ -92,6 +92,13 @@ struct RevSyncCtxt
 			return new ReplayFile;
 		}
 
+		virtual File* openFile(const char* path, const svn::Revision& base_revision)
+		{
+			cout << "Yeah! Opening file " << path << "@" << base_revision << "..." << endl;
+			return new ReplayFile;
+		}
+
+
 		virtual Directory* add(const char* path, const char* copyfrom_path, const svn::Revision& copyfrom_revision)
 		{
 			cout << "Yeah! Adding dir " << path << "..." << endl;
@@ -102,7 +109,7 @@ struct RevSyncCtxt
 
 		virtual Directory* open(const char* path, const svn::Revision& base_revision)
 		{
-			cout << "Opening file " << path << "@" << base_revision << "..." << endl;
+			cout << "Opening dir " << path << "@" << base_revision << "..." << endl;
 			return new ReplayDir;
 		}
 
@@ -200,7 +207,7 @@ struct RevSyncCtxt
 		editor->apply_textdelta		= Replay_apply_textdelta;
 */
 		ReplayEditor editor;
-		editor.replay(&m_svnRepo, entry.revision, svn::Revision(), true);
+		editor.replay(&m_svnRepo, entry.revision, 0, true);
 		//svn_ra_replay(m_svnRepo.GetInternalObj(), entry.revision, 0, true, editor.GetInternalObj(), (void*)&editor, editor.pool());
 
 		//Git::CTreeBuilder treeB(&*m_lastTree);
