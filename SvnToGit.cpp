@@ -86,30 +86,32 @@ struct RevSyncCtxt
 	{
 		virtual File* addFile(const char* path, const char* copyfrom_path, const svn::Revision& copyfrom_revision)
 		{
-			cout << "Yeah! Adding file " << path << "..." << endl;
+			cout << "A " << path;
 			if(copyfrom_path)
-				cout << "-- Copied from " << copyfrom_path << "@" << copyfrom_revision << endl;
+				cout << " -" << copyfrom_path << "@" << copyfrom_revision;
+			cout << endl;
 			return new ReplayFile;
 		}
 
 		virtual File* openFile(const char* path, const svn::Revision& base_revision)
 		{
-			cout << "Yeah! Opening file " << path << "@" << base_revision << "..." << endl;
+			cout << "M " << path << "@" << base_revision << endl;
 			return new ReplayFile;
 		}
 
 
 		virtual Directory* add(const char* path, const char* copyfrom_path, const svn::Revision& copyfrom_revision)
 		{
-			cout << "Yeah! Adding dir " << path << "..." << endl;
+			cout << "A " << path;
 			if(copyfrom_path)
-				cout << "-- Copied from " << copyfrom_path << "@" << copyfrom_revision << endl;
+				cout << " -" << copyfrom_path << "@" << copyfrom_revision;
+			cout << endl;
 			return new ReplayDir;
 		}
 
 		virtual Directory* open(const char* path, const svn::Revision& base_revision)
 		{
-			cout << "Opening dir " << path << "@" << base_revision << "..." << endl;
+			cout << "M " << path << "@" << base_revision << endl;
 			return new ReplayDir;
 		}
 
@@ -124,69 +126,11 @@ struct RevSyncCtxt
 	public:
 		Directory* openRoot(const svn::Revision& base_revision)
 		{
-			cout << "Opening root! " << base_revision << endl;
+			cout << " root@" << base_revision << endl;
 			return new ReplayDir;
 		}
 	};
 
-
-	static svn_error_t* Replay_open_root(void *edit_baton,
-                            svn_revnum_t base_revision,
-                            apr_pool_t *result_pool,
-                            void **root_baton)
-	{
-		cout << "Opening root! " << base_revision << endl;
-		return NULL;
-	}
-	static svn_error_t *Replay_add_file
-						  (const char *path,
-						   void *parent_baton,
-						   const char *copyfrom_path,
-						   svn_revnum_t copyfrom_revision,
-						   apr_pool_t *result_pool,
-						   void **file_baton)
-	{
-		cout << "Yeah! Adding file " << path << "..." << endl;
-		if(copyfrom_path)
-			cout << "-- Copied from " << copyfrom_path << "@" << copyfrom_revision << endl;
-		return NULL;
-	}
-
-	static svn_error_t *Replay_open_file(
-							const char *path,
-							void *parent_baton,
-							svn_revnum_t base_revision,
-							apr_pool_t *result_pool,
-							void **file_baton)
-	{
-		cout << "Opening file " << path << "@" << base_revision << "..." << endl;
-		*file_baton = (char*)path;
-		return NULL;
-	}
-
-	static svn_error_t *Replay_delta_window(svn_txdelta_window_t *window, void *baton)
-	{
-		if(!window)
-		{
-			cout << "Data ended..." << endl;
-			return NULL;
-		}
-		cout << "Received some delta!!" << endl;
-		cout.write(window->new_data->data, window->new_data->len);
-		return NULL;
-	}
-
-	static svn_error_t *Replay_apply_textdelta(
-								  void *file_baton,
-								  const char *base_checksum,
-								  apr_pool_t *result_pool,
-								  svn_txdelta_window_handler_t *handler,
-								  void **handler_baton)
-	{
-		cout << "Applying text delta..." << endl;
-		*handler = Replay_delta_window;
-		return NULL;
-	}
 
 	void OnSvnLogEntry(const svn::LogEntry& entry)
 	{
@@ -195,7 +139,7 @@ struct RevSyncCtxt
 
 		std::ostringstream text;
 
-		text << "\rFetching rev " << entry.revision;
+		text << "\r*** Fetching rev " << entry.revision;
 		
 		cout << text.str() << "..." << flush;
 
