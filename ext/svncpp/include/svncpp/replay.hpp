@@ -18,6 +18,8 @@ public:
 
 	DirEntry(const char* name, Directory* parent, Editor* editor):m_parent(parent), m_name(name), m_editor(editor){}
 
+	virtual void OnInit(){}
+
 	std::string	m_name;
 	Directory*	m_parent;
 	Editor*		m_editor;

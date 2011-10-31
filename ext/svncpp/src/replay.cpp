@@ -66,6 +66,7 @@ svn_error_t *open_root(void *edit_baton,
 		if(newDir)
 		{
 			newDir->m_editor	= pthis;
+			newDir->OnInit();
 		}
 		*root_baton = newDir;
 	}
@@ -99,6 +100,7 @@ svn_error_t *add_directory (const char *path,
 			newDir->m_name		= path;
 			newDir->m_parent	= parent;
 			newDir->m_editor	= parent->m_editor;
+			newDir->OnInit();
 		}
 		*child_baton = newDir;
 	}
@@ -122,6 +124,7 @@ svn_error_t *open_directory (const char *path,
 			newDir->m_name		= path;
 			newDir->m_parent	= parent;
 			newDir->m_editor	= parent->m_editor;
+			newDir->OnInit();
 		}
 		*child_baton = newDir;
 	}
@@ -160,6 +163,7 @@ svn_error_t *add_file (const char *path,
 			newFile->m_name		= path;
 			newFile->m_parent	= parent;
 			newFile->m_editor	= parent->m_editor;
+			newFile->OnInit();
 		}
 		*file_baton = newFile;
 	}
@@ -182,6 +186,7 @@ svn_error_t *open_file (const char *path,
 			newFile->m_name		= path;
 			newFile->m_parent	= parent;
 			newFile->m_editor	= parent->m_editor;
+			newFile->OnInit();
 		}
 		*file_baton = newFile;
 	}
