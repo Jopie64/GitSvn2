@@ -126,7 +126,7 @@ struct RevSyncCtxt
 	{
 	public:
 		ReplayFile(RevSyncCtxt* ctxt, svn_revnum_t rev=0):m_ctxt(ctxt), m_rev(rev), m_bModified(false){}
-		ReplayFile(RevSyncCtxt* ctxt, const char* copyfrom_path, svn_revnum_t copyfrom_rev):m_ctxt(ctxt), m_bModified(false)
+		ReplayFile(RevSyncCtxt* ctxt, const char* copyfrom_path, svn_revnum_t copyfrom_rev):m_ctxt(ctxt), m_bModified(false), m_rev(-1)
 		{
 			if(copyfrom_path)
 				m_blob = m_ctxt->FindBlob(copyfrom_path, copyfrom_rev);
