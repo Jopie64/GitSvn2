@@ -61,5 +61,5 @@ void CSvnProp::changeProp(const char *name, const svn_string_t *value)
 void CSvnProp::Write(std::ostream& os)
 {
 	for(MapProp::iterator i = m_NameVal.begin(); i != m_NameVal.end(); ++i)
-		os << i->first << std::endl << i->second << '\04' << std::endl;
+		os << i->first << std::endl << i->second << '\04' << std::endl << std::endl;
 }
