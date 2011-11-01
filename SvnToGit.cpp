@@ -18,6 +18,26 @@ extern svn::Context* G_svnCtxt;
 
 using namespace svn::replay;
 
+class PathRev
+{
+public:
+	PathRev(const std::string& path, svn_revnum_t rev = -1):m_path(path),m_rev(rev)
+	{
+		while(*m_path.c_str() == '/')
+			m_path = m_path.substr(1);
+	}
+
+	bool operator<(const PathRev& that)const
+	{
+		if(m_rev < that.m_rev) return true;
+		if(m_rev > that.m_rev) return false;
+		return m_path < that.m_path;
+	}
+
+	std::string m_path;
+	svn_revnum_t m_rev;
+};
+typedef std::map<PathRev, Git::COid> MapPathRev_Oid;
 
 struct RevSyncCtxt
 {
@@ -39,7 +59,17 @@ struct RevSyncCtxt
 	Git::CTreeNode*	m_Tree_Content;
 	Git::CTreeNode*	m_Tree_Meta;
 
+	MapPathRev_Oid	m_mapBlob;
+
 	std::string m_csBaseRefName;
+
+	Git::COid FindBlob(const std::string& path, svn_revnum_t rev)
+	{
+		MapPathRev_Oid::iterator i = m_mapBlob.find(PathRev(path, rev));
+		if(i == m_mapBlob.end())
+			throw svn::Exception(JStd::String::Format("Cannot find GIT blob for %s@%d", path.c_str(), rev).c_str());
+		return i->second;
+	}
 
 	void CheckExistingRef(const std::string refName)
 	{
@@ -72,50 +102,113 @@ struct RevSyncCtxt
 		return src;
 	}
 
+	class ReplayDeltaHandler : public ApplyDeltaHandler
+	{
+	public:
+		ReplayDeltaHandler(std::string& content):m_content(content){}
+		std::string& m_content;
+		virtual void handleWindow(svn_txdelta_window_t *window)
+		{
+			if(window->sview_len != m_content.size())
+				throw svn::Exception(JStd::String::Format("Content size mismatch of file %s. Expected %Id, got %Id.",
+										m_file->m_name.c_str(), window->sview_len, m_content.size()).c_str());
+			std::string out;
+			out.resize(window->tview_len);
+			apr_size_t size = out.size();
+			svn_txdelta_apply_instructions(window, m_content.c_str(), &*out.begin(), &size);
+			if(out.size() != size)
+				out.resize(size);
+			m_content.swap(out);
+		}
+	};
+
 	class ReplayFile : public File
 	{
 	public:
+		ReplayFile(RevSyncCtxt* ctxt, svn_revnum_t rev=0):m_ctxt(ctxt), m_rev(rev), m_bModified(false){}
+		ReplayFile(RevSyncCtxt* ctxt, const char* copyfrom_path, svn_revnum_t copyfrom_rev):m_ctxt(ctxt), m_bModified(false)
+		{
+			if(copyfrom_path)
+				m_blob = m_ctxt->FindBlob(copyfrom_path, copyfrom_rev);
+			else
+				m_bModified = true;
+		}
+
+		RevSyncCtxt*	m_ctxt;
+		std::string		m_content;
+		svn_revnum_t	m_rev;
+		bool			m_bModified;
+		Git::COid		m_blob;
+
+		void onInit()
+		{
+			if(!m_new)
+				m_blob = m_ctxt->FindBlob(m_name, m_rev);
+		}
+
 		virtual ApplyDeltaHandler* applyDelta(const char* baseChecksum)
 		{
-			return new ApplyDeltaHandler();
+			if(!m_bModified && !m_new)
+			{
+				//Lazy read
+				Git::CBlob blob;
+				m_ctxt->m_gitRepo.Read(blob, m_blob);
+				m_content.assign((const char*)blob.Content(), blob.Size());
+			}
+			m_bModified = true;
+			return new ReplayDeltaHandler(m_content);
+		}
+
+		void onClose(const char* checksum)
+		{
+			//TODO: Check content with checksum
+			if(m_bModified)
+				m_blob = m_ctxt->m_gitRepo.WriteBlob(m_content.data(), m_content.size());
+			m_ctxt->m_Tree_Content->Insert(m_name.c_str(), m_blob);
+			m_ctxt->m_mapBlob[PathRev(m_name, m_editor->m_TargetRevision)] = m_blob;
+			m_ctxt->m_mapBlob[m_name] = m_blob;
 		}
 
 	};
 
 	class ReplayDir : public Directory
 	{
-		virtual File* addFile(const char* path, const char* copyfrom_path, const svn::Revision& copyfrom_revision)
+	public:
+		ReplayDir(RevSyncCtxt* ctxt):m_ctxt(ctxt){}
+		RevSyncCtxt* m_ctxt;
+
+		virtual File* addFile(const char* path, const char* copyfrom_path, svn_revnum_t copyfrom_revision)
 		{
 			cout << "A " << path;
 			if(copyfrom_path)
 				cout << " -" << copyfrom_path << "@" << copyfrom_revision;
 			cout << endl;
-			return new ReplayFile;
+			return new ReplayFile(m_ctxt, copyfrom_path, copyfrom_revision);
 		}
 
-		virtual File* openFile(const char* path, const svn::Revision& base_revision)
+		virtual File* openFile(const char* path, svn_revnum_t base_revision)
 		{
 			cout << "M " << path << "@" << base_revision << endl;
-			return new ReplayFile;
+			return new ReplayFile(m_ctxt, base_revision);
 		}
 
 
-		virtual Directory* add(const char* path, const char* copyfrom_path, const svn::Revision& copyfrom_revision)
+		virtual Directory* add(const char* path, const char* copyfrom_path, svn_revnum_t copyfrom_revision)
 		{
 			cout << "A " << path;
 			if(copyfrom_path)
 				cout << " -" << copyfrom_path << "@" << copyfrom_revision;
 			cout << endl;
-			return new ReplayDir;
+			return new ReplayDir(m_ctxt);
 		}
 
-		virtual Directory* open(const char* path, const svn::Revision& base_revision)
+		virtual Directory* open(const char* path, svn_revnum_t base_revision)
 		{
 			cout << "M " << path << "@" << base_revision << endl;
-			return new ReplayDir;
+			return new ReplayDir(m_ctxt);
 		}
 
-		virtual void	   deleteEntry(const char* path, const svn::Revision& revision)
+		virtual void	   deleteEntry(const char* path, svn_revnum_t revision)
 		{
 		}
 
@@ -124,11 +217,13 @@ struct RevSyncCtxt
 	class ReplayEditor : public Editor
 	{
 	public:
-		Directory* openRoot(const svn::Revision& base_revision)
+		Directory* openRoot(svn_revnum_t base_revision)
 		{
 			cout << " root@" << base_revision << endl;
-			return new ReplayDir;
+			return new ReplayDir(m_ctxt);
 		}
+
+		RevSyncCtxt* m_ctxt;
 	};
 
 
@@ -141,16 +236,10 @@ struct RevSyncCtxt
 
 		text << "\r*** Fetching rev " << entry.revision;
 		
-		cout << text.str() << "..." << flush;
+		cout << text.str() << " " << flush;
 
-/*		svn::Pool pool;
-		svn_delta_editor_t* editor	= svn_delta_default_editor(pool);
-		editor->open_root			= Replay_open_root;
-		editor->add_file			= Replay_add_file;
-		editor->open_file			= Replay_open_file;
-		editor->apply_textdelta		= Replay_apply_textdelta;
-*/
 		ReplayEditor editor;
+		editor.m_ctxt = this;
 		editor.replay(&m_svnRepo, entry.revision, 0, true);
 		//svn_ra_replay(m_svnRepo.GetInternalObj(), entry.revision, 0, true, editor.GetInternalObj(), (void*)&editor, editor.pool());
 
