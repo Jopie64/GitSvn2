@@ -207,7 +207,7 @@ struct RevSyncCtxt
 
 		std::string& Content(bool P_bRead)
 		{
-			if(P_bRead && !m_bHasBeenRead && !m_new)
+			if(P_bRead && !m_bHasBeenRead)
 			{
 				//Lazy read
 				Git::CBlob blob;
@@ -366,7 +366,10 @@ struct RevSyncCtxt
 
 		Git::CTree tree(m_gitRepo, m_rootTree.Write(m_gitRepo));
 
-		Git::CSignature sig(entry.author.c_str(), (entry.author + "@svn").c_str());
+		std::string author = entry.author;
+		if(author.empty())
+			author = "nobody";
+		Git::CSignature sig(author.c_str(), (author + "@svn").c_str());
 
 
 		std::ostringstream msg;
