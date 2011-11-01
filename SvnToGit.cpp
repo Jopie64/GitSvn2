@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include "GitCpp\jstd\JStd.h"
+#include "SvnProp.h"
 
 #undef strcasecmp
 #undef strncasecmp
@@ -102,6 +103,45 @@ struct RevSyncCtxt
 		return src;
 	}
 
+	class PropertyFile
+	{
+	public:
+		PropertyFile(RevSyncCtxt* ctxt):m_ctxt(ctxt), m_bModified(false){}
+
+		
+		void changeProp(const char *name, const svn_string_t *value)
+		{
+			if(!m_bModified)
+			{
+				Git::CTreeNode* propFile = m_ctxt->m_Tree_Meta->GetByPath(m_fileName.c_str());
+				if(!propFile->m_oid.isNull())
+				{
+					Git::CBlob blob;
+					m_ctxt->m_gitRepo.Read(blob, propFile->m_oid);
+					const char* content = (const char*)blob.Content();
+					m_Prop.Read(content, content + blob.Size());
+				}
+			}
+			m_bModified = true;
+			m_Prop.changeProp(name, value);
+		}
+		
+		void Write()
+		{
+			if(!m_bModified)
+				return;
+			std::ostringstream os;
+			m_Prop.Write(os);
+			std::string newContent = os.str();
+			m_ctxt->m_Tree_Meta->Insert(m_fileName.c_str(), m_ctxt->m_gitRepo.WriteBlob(newContent.data(), newContent.size()));
+		}
+
+		RevSyncCtxt*	m_ctxt;
+		std::string		m_fileName;
+		bool			m_bModified;
+		CSvnProp		m_Prop;
+	};
+
 	class ReplayFile : public File
 	{
 	public:
@@ -139,8 +179,8 @@ struct RevSyncCtxt
 			}
 		};
 
-		ReplayFile(RevSyncCtxt* ctxt, svn_revnum_t rev=0):m_ctxt(ctxt), m_rev(rev), m_bHasBeenRead(false), m_bModified(false), m_iWindowCount(0){}
-		ReplayFile(RevSyncCtxt* ctxt, const char* copyfrom_path, svn_revnum_t copyfrom_rev):m_ctxt(ctxt), m_bHasBeenRead(false), m_bModified(false), m_rev(-1), m_iWindowCount(0)
+		ReplayFile(RevSyncCtxt* ctxt, svn_revnum_t rev=0):m_ctxt(ctxt), m_props(ctxt), m_rev(rev), m_bHasBeenRead(false), m_bModified(false), m_iWindowCount(0){}
+		ReplayFile(RevSyncCtxt* ctxt, const char* copyfrom_path, svn_revnum_t copyfrom_rev):m_ctxt(ctxt), m_props(ctxt),m_bHasBeenRead(false), m_bModified(false), m_rev(-1), m_iWindowCount(0)
 		{
 			if(copyfrom_path)
 				m_blob = m_ctxt->FindBlob(copyfrom_path, copyfrom_rev);
@@ -154,11 +194,13 @@ struct RevSyncCtxt
 		bool			m_bHasBeenRead;
 		bool			m_bModified;
 		Git::COid		m_blob;
+		PropertyFile	m_props;
 
 		int				m_iWindowCount;
 
 		void onInit()
 		{
+			m_props.m_fileName = m_name;
 			if(!m_new)
 				m_blob = m_ctxt->FindBlob(m_name, m_rev);
 		}
@@ -183,6 +225,11 @@ struct RevSyncCtxt
 			return new ReplayDeltaHandler(this);
 		}
 
+		void changeProp(const char *name, const svn_string_t *value)
+		{
+			m_props.changeProp(name, value);
+		}
+
 		void onClose(const char* checksum)
 		{
 			//TODO: Check content with checksum
@@ -191,6 +238,7 @@ struct RevSyncCtxt
 			m_ctxt->m_Tree_Content->Insert(m_name.c_str(), m_blob);
 			m_ctxt->m_mapBlob[PathRev(m_name, m_editor->m_TargetRevision)] = m_blob;
 			m_ctxt->m_mapBlob[m_name] = m_blob;
+			m_props.Write();
 		}
 
 	};
@@ -198,8 +246,19 @@ struct RevSyncCtxt
 	class ReplayDir : public Directory
 	{
 	public:
-		ReplayDir(RevSyncCtxt* ctxt):m_ctxt(ctxt){}
+		ReplayDir(RevSyncCtxt* ctxt):m_ctxt(ctxt), m_props(ctxt){}
 		RevSyncCtxt* m_ctxt;
+		PropertyFile m_props;
+
+		void onInit()
+		{
+			m_props.m_fileName = m_name + "/.svnDirectoryProps";
+		}
+
+		void onClose()
+		{
+			m_props.Write();
+		}
 
 		virtual File* addFile(const char* path, const char* copyfrom_path, svn_revnum_t copyfrom_revision)
 		{
@@ -242,8 +301,13 @@ struct RevSyncCtxt
 				cout << "@" << revision;
 			cout << endl;
 			m_ctxt->m_Tree_Content->Delete(path);
+			m_ctxt->m_Tree_Meta->Delete(path);
 		}
 
+		void changeProp(const char *name, const svn_string_t *value)
+		{
+			m_props.changeProp(name, value);
+		}
 	};
 
 	class ReplayEditor : public Editor

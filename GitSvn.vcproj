@@ -197,6 +197,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\SvnProp.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\SvnToGit.cpp"
 				>
 			</File>
@@ -220,6 +224,10 @@
 			>
 			<File
 				RelativePath=".\stdafx.h"
+				>
+			</File>
+			<File
+				RelativePath=".\SvnProp.h"
 				>
 			</File>
 			<File
