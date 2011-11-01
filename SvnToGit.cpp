@@ -228,12 +228,20 @@ struct RevSyncCtxt
 
 		virtual Directory* open(const char* path, svn_revnum_t base_revision)
 		{
-			cout << "M " << path << "@" << base_revision << endl;
+			cout << "M " << path;
+			if(base_revision >= 0)
+				cout << "@" << base_revision;
+			cout << endl;
 			return new ReplayDir(m_ctxt);
 		}
 
-		virtual void	   deleteEntry(const char* path, svn_revnum_t revision)
+		virtual void deleteEntry(const char* path, svn_revnum_t revision)
 		{
+			cout << "D " << path;
+			if(revision >= 0)
+				cout << "@" << revision;
+			cout << endl;
+			m_ctxt->m_Tree_Content->Delete(path);
 		}
 
 	};
