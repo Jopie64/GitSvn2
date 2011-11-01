@@ -102,43 +102,60 @@ struct RevSyncCtxt
 		return src;
 	}
 
-	class ReplayDeltaHandler : public ApplyDeltaHandler
-	{
-	public:
-		ReplayDeltaHandler(std::string& content):m_content(content){}
-		std::string& m_content;
-		virtual void handleWindow(svn_txdelta_window_t *window)
-		{
-			if(window->sview_len != m_content.size())
-				throw svn::Exception(JStd::String::Format("Content size mismatch of file %s. Expected %Id, got %Id.",
-										m_file->m_name.c_str(), window->sview_len, m_content.size()).c_str());
-			std::string out;
-			out.resize(window->tview_len);
-			apr_size_t size = out.size();
-			svn_txdelta_apply_instructions(window, m_content.c_str(), &*out.begin(), &size);
-			if(out.size() != size)
-				out.resize(size);
-			m_content.swap(out);
-		}
-	};
-
 	class ReplayFile : public File
 	{
 	public:
-		ReplayFile(RevSyncCtxt* ctxt, svn_revnum_t rev=0):m_ctxt(ctxt), m_rev(rev), m_bModified(false){}
-		ReplayFile(RevSyncCtxt* ctxt, const char* copyfrom_path, svn_revnum_t copyfrom_rev):m_ctxt(ctxt), m_bModified(false), m_rev(-1)
+		class ReplayDeltaHandler : public ApplyDeltaHandler
+		{
+		public:
+			ReplayDeltaHandler(ReplayFile* file):m_file(file){}
+			ReplayFile* m_file;
+			virtual void handleWindow(svn_txdelta_window_t *window)
+			{
+				std::string& content = m_file->Content(window->sview_len != 0);
+				std::string out;
+				out.resize(window->tview_len);
+				apr_size_t size = out.size();
+				if(window->sview_len != 0)
+				{
+					if(window->sview_len != content.size())
+						throw svn::Exception(JStd::String::Format("Content size mismatch of file %s. Expected %Id, got %Id.",
+												m_file->m_name.c_str(), window->sview_len, content.size()).c_str());
+					svn_txdelta_apply_instructions(window, content.c_str(), &*out.begin(), &size);
+					if(out.size() != size)
+						out.resize(size);
+					content.swap(out);
+				}
+				else
+				{
+					if(!content.empty())
+						cout << "Test" << endl;
+					svn_txdelta_apply_instructions(window, NULL, &*out.begin(), &size);
+					if(out.size() != size)
+						out.resize(size);
+					content += out;
+				}
+
+			}
+		};
+
+		ReplayFile(RevSyncCtxt* ctxt, svn_revnum_t rev=0):m_ctxt(ctxt), m_rev(rev), m_bHasBeenRead(false), m_bModified(false), m_iWindowCount(0){}
+		ReplayFile(RevSyncCtxt* ctxt, const char* copyfrom_path, svn_revnum_t copyfrom_rev):m_ctxt(ctxt), m_bHasBeenRead(false), m_bModified(false), m_rev(-1), m_iWindowCount(0)
 		{
 			if(copyfrom_path)
 				m_blob = m_ctxt->FindBlob(copyfrom_path, copyfrom_rev);
 			else
-				m_bModified = true;
+				m_bHasBeenRead = true; //Does not have to be read
 		}
 
 		RevSyncCtxt*	m_ctxt;
 		std::string		m_content;
 		svn_revnum_t	m_rev;
+		bool			m_bHasBeenRead;
 		bool			m_bModified;
 		Git::COid		m_blob;
+
+		int				m_iWindowCount;
 
 		void onInit()
 		{
@@ -146,17 +163,24 @@ struct RevSyncCtxt
 				m_blob = m_ctxt->FindBlob(m_name, m_rev);
 		}
 
-		virtual ApplyDeltaHandler* applyDelta(const char* baseChecksum)
+		std::string& Content(bool P_bRead)
 		{
-			if(!m_bModified && !m_new)
+			if(P_bRead && !m_bHasBeenRead && !m_new)
 			{
 				//Lazy read
 				Git::CBlob blob;
 				m_ctxt->m_gitRepo.Read(blob, m_blob);
 				m_content.assign((const char*)blob.Content(), blob.Size());
 			}
-			m_bModified = true;
-			return new ReplayDeltaHandler(m_content);
+			m_bHasBeenRead = true;
+			m_bModified = true; //Window is going to be applied. So it is going to be modified.
+			++m_iWindowCount;
+			return m_content;
+		}
+
+		virtual ApplyDeltaHandler* applyDelta(const char* baseChecksum)
+		{
+			return new ReplayDeltaHandler(this);
 		}
 
 		void onClose(const char* checksum)
