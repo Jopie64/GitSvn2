@@ -80,7 +80,11 @@ svn_error_t *close_directory(void *dir_baton,
 {
 	Directory* dir = (Directory*)dir_baton;
 
-	delete dir;
+	if(dir)
+	{
+		dir->onClose();
+		delete dir;
+	}
 
 	return NULL;
 }
@@ -251,25 +255,37 @@ svn_error_t *apply_textdelta (void *file_baton,
 	return NULL;
 }
 
+svn_error_t *change_dir_prop (void *dir_baton,
+							  const char *name,
+							  const svn_string_t *value,
+							  apr_pool_t *scratch_pool)
+{
+	Directory* dir = (Directory*)dir_baton;
+	try
+	{
+		dir->changeProp(name, value);
+	}
+	catch(svn::ClientException& e){ return e.detach(); }
+	return NULL;
+}
+
+svn_error_t *change_file_prop (void *file_baton,
+							   const char *name,
+							   const svn_string_t *value,
+							   apr_pool_t *scratch_pool)
+{
+	File* file = (File*)file_baton;
+	try
+	{
+		file->changeProp(name, value);
+	}
+	catch(svn::ClientException& e){ return e.detach(); }
+	return NULL;
+}
+
+
 
 #if 0
-
-	/** Change the value of a directory's property.
-	* - @a dir_baton specifies the directory whose property should change.
-	* - @a name is the name of the property to change.
-	* - @a value is the new (final) value of the property, or @c NULL if the
-	*   property should be removed altogether.
-	*
-	* The callback is guaranteed to be called exactly once for each property
-	* whose value differs between the start and the end of the edit.
-	*
-	* Any temporary allocations may be performed in @a scratch_pool.
-	*/
-	svn_error_t *(*change_dir_prop)(void *dir_baton,
-								  const char *name,
-								  const svn_string_t *value,
-								  apr_pool_t *scratch_pool);
-
 
 	/** In the directory represented by @a parent_baton, indicate that
 	* @a path is present as a subdirectory in the edit source, but
@@ -282,22 +298,6 @@ svn_error_t *apply_textdelta (void *file_baton,
 								   void *parent_baton,
 								   apr_pool_t *scratch_pool);
 
-
-	/** Change the value of a file's property.
-	* - @a file_baton specifies the file whose property should change.
-	* - @a name is the name of the property to change.
-	* - @a value is the new (final) value of the property, or @c NULL if the
-	*   property should be removed altogether.
-	*
-	* The callback is guaranteed to be called exactly once for each property
-	* whose value differs between the start and the end of the edit.
-	*
-	* Any temporary allocations may be performed in @a scratch_pool.
-	*/
-	svn_error_t *(*change_file_prop)(void *file_baton,
-								   const char *name,
-								   const svn_string_t *value,
-								   apr_pool_t *scratch_pool);
 
 	/** In the directory represented by @a parent_baton, indicate that
 	* @a path is present as a file in the edit source, but cannot be
@@ -342,6 +342,8 @@ void SetCallbacks(svn_delta_editor_t* ed)
 	ed->open_file			= &open_file;
 	ed->close_file			= &close_file;
 	ed->apply_textdelta		= &apply_textdelta;
+	ed->change_dir_prop		= &change_dir_prop;
+	ed->change_file_prop	= &change_file_prop;
 }
 
 }//callbacks

@@ -20,6 +20,9 @@ public:
 
 	virtual void onInit(){}
 
+	virtual void changeProp(const char *name, const svn_string_t *value) {}
+
+
 	bool		m_new;
 	std::string	m_name;
 	Directory*	m_parent;
@@ -30,6 +33,7 @@ class Directory : public DirEntry
 {
 public:
 
+	virtual void	   onClose(){}
 	virtual Directory* add(const char* path, const char* copyfrom_path, svn_revnum_t copyfrom_revision) =0;
 	virtual File*	   addFile(const char* path, const char* copyfrom_path, svn_revnum_t copyfrom_revision) =0;
 	virtual Directory* open(const char* path, svn_revnum_t base_revision) =0;
