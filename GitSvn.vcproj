@@ -204,6 +204,10 @@
 				RelativePath=".\SvnToGit.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\SvnToGitAux.cpp"
+				>
+			</File>
 			<Filter
 				Name="Ext"
 				>
@@ -232,6 +236,10 @@
 			</File>
 			<File
 				RelativePath=".\SvnToGit.h"
+				>
+			</File>
+			<File
+				RelativePath=".\SvnToGitAux.h"
 				>
 			</File>
 			<File

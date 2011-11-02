@@ -1,57 +1,27 @@
 #include "StdAfx.h"
 #include "SvnToGit.h"
-#include "GitCpp\Git.h"
-#include <iostream>
-#include <sstream>
-#include "GitCpp\jstd\JStd.h"
-#include "SvnProp.h"
 
-#undef strcasecmp
-#undef strncasecmp
-
-#include "svncpp\stream.hpp"
-#include "svncpp\client.hpp"
-#include "svncpp\replay.hpp"
+#include "SvnToGitAux.h"
+#include "svncpp/client.hpp"
 using namespace std;
 
-extern svn::Client* G_svnClient;
+
 extern svn::Context* G_svnCtxt;
 
 using namespace svn::replay;
 
-class PathRev
-{
-public:
-	PathRev(const std::string& path, svn_revnum_t rev = -1):m_path(path),m_rev(rev)
-	{
-		while(*m_path.c_str() == '/')
-			m_path = m_path.substr(1);
-	}
+using namespace SvnToGit;
 
-	bool operator<(const PathRev& that)const
-	{
-		if(m_rev < that.m_rev) return true;
-		if(m_rev > that.m_rev) return false;
-		return m_path < that.m_path;
-	}
-
-	std::string m_path;
-	svn_revnum_t m_rev;
-};
-typedef std::map<PathRev, Git::COid> MapPathRev_Oid;
-
-struct RevSyncCtxt
+struct RevSyncCtxt : RunCtxt
 {
 	typedef std::tr1::shared_ptr<Git::CTree> sharedTree;
-	RevSyncCtxt(Git::CRepo& gitRepo, svn::Repo& svnRepo, svn::Repo& svnRepo2, const std::string& svnRepoUrl):m_gitRepo(gitRepo), m_svnRepo(svnRepo), m_svnRepo2(svnRepo2), m_svnRepoUrl(svnRepoUrl)
+	RevSyncCtxt(Git::CRepo& gitRepo, svn::Repo& svnRepo, const std::string& svnRepoUrl):RunCtxt(gitRepo), m_svnRepo(svnRepo), m_svnRepoUrl(svnRepoUrl)
 	{
 		m_Tree_Meta		= m_rootTree.GetByPath("meta");
 		m_Tree_Content	= m_rootTree.GetByPath("content");
 	}
 
-	Git::CRepo& m_gitRepo;
 	svn::Repo&	m_svnRepo;
-	svn::Repo&	m_svnRepo2;
 	std::string m_svnRepoUrl;
 
 	Git::COid	m_lastCommit;
@@ -60,17 +30,8 @@ struct RevSyncCtxt
 	Git::CTreeNode*	m_Tree_Content;
 	Git::CTreeNode*	m_Tree_Meta;
 
-	MapPathRev_Oid	m_mapBlob;
 
 	std::string m_csBaseRefName;
-
-	Git::COid FindBlob(const std::string& path, svn_revnum_t rev)
-	{
-		MapPathRev_Oid::iterator i = m_mapBlob.find(PathRev(path, rev));
-		if(i == m_mapBlob.end())
-			throw svn::Exception(JStd::String::Format("Cannot find GIT blob for %s@%d", path.c_str(), rev).c_str());
-		return i->second;
-	}
 
 	void CheckExistingRef(const std::string refName)
 	{
@@ -102,45 +63,6 @@ struct RevSyncCtxt
 			src = src.substr(pos);
 		return src;
 	}
-
-	class PropertyFile
-	{
-	public:
-		PropertyFile(RevSyncCtxt* ctxt):m_ctxt(ctxt), m_bModified(false){}
-
-		
-		void changeProp(const char *name, const svn_string_t *value)
-		{
-			if(!m_bModified)
-			{
-				Git::CTreeNode* propFile = m_ctxt->m_Tree_Meta->GetByPath(m_fileName.c_str());
-				if(!propFile->m_oid.isNull())
-				{
-					Git::CBlob blob;
-					m_ctxt->m_gitRepo.Read(blob, propFile->m_oid);
-					const char* content = (const char*)blob.Content();
-					m_Prop.Read(content, content + blob.Size());
-				}
-			}
-			m_bModified = true;
-			m_Prop.changeProp(name, value);
-		}
-		
-		void Write()
-		{
-			if(!m_bModified)
-				return;
-			std::ostringstream os;
-			m_Prop.Write(os);
-			std::string newContent = os.str();
-			m_ctxt->m_Tree_Meta->Insert(m_fileName.c_str(), m_ctxt->m_gitRepo.WriteBlob(newContent.data(), newContent.size()));
-		}
-
-		RevSyncCtxt*	m_ctxt;
-		std::string		m_fileName;
-		bool			m_bModified;
-		CSvnProp		m_Prop;
-	};
 
 	class ReplayFile : public File
 	{
@@ -183,7 +105,8 @@ struct RevSyncCtxt
 		ReplayFile(RevSyncCtxt* ctxt, const char* copyfrom_path, svn_revnum_t copyfrom_rev):m_ctxt(ctxt), m_props(ctxt),m_bHasBeenRead(false), m_bModified(false), m_rev(-1), m_iWindowCount(0)
 		{
 			if(copyfrom_path)
-				m_blob = m_ctxt->FindBlob(copyfrom_path, copyfrom_rev);
+				//TODO: Also find and copy meta blob
+				m_blobs = m_ctxt->m_mapRev.Get(copyfrom_path, copyfrom_rev);
 			else
 				m_bHasBeenRead = true; //Does not have to be read
 		}
@@ -193,16 +116,16 @@ struct RevSyncCtxt
 		svn_revnum_t	m_rev;
 		bool			m_bHasBeenRead;
 		bool			m_bModified;
-		Git::COid		m_blob;
+		GitOids			m_blobs;
 		PropertyFile	m_props;
 
 		int				m_iWindowCount;
 
 		void onInit()
 		{
-			m_props.m_fileName = m_name;
 			if(!m_new)
-				m_blob = m_ctxt->FindBlob(m_name, m_rev);
+				m_blobs = m_ctxt->m_mapRev.Get(m_name, m_rev);
+			m_props.m_Oid = m_blobs.m_oidMeta;
 		}
 
 		std::string& Content(bool P_bRead)
@@ -211,7 +134,7 @@ struct RevSyncCtxt
 			{
 				//Lazy read
 				Git::CBlob blob;
-				m_ctxt->m_gitRepo.Read(blob, m_blob);
+				m_ctxt->m_gitRepo.Read(blob, m_blobs.m_oidContent);
 				m_content.assign((const char*)blob.Content(), blob.Size());
 			}
 			m_bHasBeenRead = true;
@@ -233,12 +156,16 @@ struct RevSyncCtxt
 		void onClose(const char* checksum)
 		{
 			//TODO: Check content with checksum
+			//Write content
 			if(m_bModified)
-				m_blob = m_ctxt->m_gitRepo.WriteBlob(m_content.data(), m_content.size());
-			m_ctxt->m_Tree_Content->Insert(m_name.c_str(), m_blob);
-			m_ctxt->m_mapBlob[PathRev(m_name, m_editor->m_TargetRevision)] = m_blob;
-			m_ctxt->m_mapBlob[m_name] = m_blob;
-			m_props.Write();
+				m_blobs.m_oidContent = m_ctxt->m_gitRepo.WriteBlob(m_content.data(), m_content.size());
+			m_ctxt->m_Tree_Content->Insert(m_name.c_str(), m_blobs.m_oidContent);
+			//Write meta data
+			m_blobs.m_oidMeta = m_props.Write();
+			if(!m_blobs.m_oidMeta.isNull())
+				m_ctxt->m_Tree_Meta->Insert(m_name.c_str(), m_blobs.m_oidMeta);
+			m_ctxt->m_mapRev.Get(m_name, m_editor->m_TargetRevision, false) = m_blobs;
+			m_ctxt->m_mapRev.Get(m_name, -1, false)							= m_blobs;
 		}
 
 	};
@@ -246,18 +173,36 @@ struct RevSyncCtxt
 	class ReplayDir : public Directory
 	{
 	public:
-		ReplayDir(RevSyncCtxt* ctxt):m_ctxt(ctxt), m_props(ctxt){}
+		ReplayDir(RevSyncCtxt* ctxt, svn_revnum_t rev, const char* copyfrom_path = NULL, svn_revnum_t copyfrom_revision = -1):m_ctxt(ctxt), m_rev(rev), m_props(ctxt)
+		{
+			//TODO: copy tree and meta tree
+			if(copyfrom_path)
+				m_trees = ctxt->m_mapRev.Get(copyfrom_path, copyfrom_revision);
+		}
 		RevSyncCtxt* m_ctxt;
 		PropertyFile m_props;
 
+		GitOids			m_trees;
+		svn_revnum_t	m_rev;
+
 		void onInit()
 		{
-			m_props.m_fileName = m_name + "/.svnDirectoryProps";
+			if(!m_new)
+			{
+				if(!m_name.empty())
+					m_trees = m_ctxt->m_mapRev.Get(m_name + "/.svnDirectoryProps", m_rev);
+			}
+			m_props.m_Oid = m_trees.m_oidMeta; //.m_fileName = m_name + "/.svnDirectoryProps";
 		}
 
 		void onClose()
 		{
-			m_props.Write();
+			if(m_name.empty())
+				return;
+			m_trees.m_oidMeta = m_props.Write();
+			m_ctxt->m_Tree_Meta->Insert((m_name + "/.svnDirectoryProps").c_str(), m_trees.m_oidMeta);
+			m_ctxt->m_mapRev.Get(m_name + "/.svnDirectoryProps", -1) = m_trees;
+			//TODO: also update current revision
 		}
 
 		virtual File* addFile(const char* path, const char* copyfrom_path, svn_revnum_t copyfrom_revision)
@@ -282,7 +227,7 @@ struct RevSyncCtxt
 			if(copyfrom_path)
 				cout << " -" << copyfrom_path << "@" << copyfrom_revision;
 			cout << endl;
-			return new ReplayDir(m_ctxt);
+			return new ReplayDir(m_ctxt, -1, copyfrom_path, copyfrom_revision);
 		}
 
 		virtual Directory* open(const char* path, svn_revnum_t base_revision)
@@ -291,7 +236,7 @@ struct RevSyncCtxt
 			if(base_revision >= 0)
 				cout << "@" << base_revision;
 			cout << endl;
-			return new ReplayDir(m_ctxt);
+			return new ReplayDir(m_ctxt, base_revision);
 		}
 
 		virtual void deleteEntry(const char* path, svn_revnum_t revision)
@@ -316,7 +261,7 @@ struct RevSyncCtxt
 		Directory* openRoot(svn_revnum_t base_revision)
 		{
 			cout << " root@" << base_revision << endl;
-			return new ReplayDir(m_ctxt);
+			return new ReplayDir(m_ctxt, base_revision);
 		}
 
 		RevSyncCtxt* m_ctxt;
@@ -397,7 +342,7 @@ void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char
 //	Git::CSignature sig("Johan", "johan@test.nl");
 	svn::Context* W_Context2Ptr = new svn::Context();
 	svn::Repo svnRepo(W_Context2Ptr, svnRepoUrl);
-	svn::Repo svnRepo2(new svn::Context(), svnRepoUrl);
+	//svn::Repo svnRepo2(new svn::Context(), svnRepoUrl);
 
 	//svn::Repo svnRepo(G_svnCtxt, svnRepoUrl);
 
@@ -417,7 +362,7 @@ void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char
 
 	cout << "Fetching subversion log from " << svnRepoUrl << " ..." << endl;
 
-	RevSyncCtxt ctxt(gitRepo, svnRepo, svnRepo2, svnRepoUrl);
+	RevSyncCtxt ctxt(gitRepo, svnRepo, svnRepoUrl);
 	//ctxt.CheckExistingRefs();
 
 	ctxt.m_csBaseRefName = refBaseName;
