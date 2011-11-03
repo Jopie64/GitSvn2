@@ -201,7 +201,8 @@ struct RevSyncCtxt : RunCtxt
 				return;
 			m_trees.m_oidMeta = m_props.Write();
 			m_ctxt->m_Tree_Meta->Insert((m_name + "/.svnDirectoryProps").c_str(), m_trees.m_oidMeta);
-			m_ctxt->m_mapRev.Get(m_name + "/.svnDirectoryProps", -1) = m_trees;
+			m_ctxt->m_mapRev.Get(m_name + "/.svnDirectoryProps", m_rev, false) = m_trees;
+			m_ctxt->m_mapRev.Get(m_name + "/.svnDirectoryProps", -1, false) = m_trees;
 			//TODO: also update current revision
 		}
 

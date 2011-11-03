@@ -35,7 +35,6 @@ using namespace std;
 void Test();
 
 svn::Context* G_svnCtxt = NULL;
-svn::Client* G_svnClient = NULL;
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -45,7 +44,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	try
 	{
 		G_svnCtxt = new svn::Context();
-		G_svnClient = new svn::Client(G_svnCtxt);
 
 		Test();
 
@@ -60,7 +58,6 @@ int _tmain(int argc, _TCHAR* argv[])
 		cout << "Some subversion stuff went wrong: " << e.message() << endl;
 	}
 
-	delete G_svnClient;
 	delete G_svnCtxt;
 
 	char c;
@@ -87,64 +84,5 @@ void Test()
 	SvnToGitSync(testRepoPath, svnrepo);
 
 	return;
-	
-	try
-	{
-		repo.Open((wstring(testRepoPath) + L".git/").c_str());
-		cout << "Opened git repository on " << JStd::String::ToMult(testRepoPath, CP_OEMCP) << endl;
-	}
-	catch(std::exception&)
-	{
-		cout << "Creating test git repository on " << JStd::String::ToMult(testRepoPath, CP_OEMCP) << "..." << endl;
 
-		repo.Create(testRepoPath, false);
-	}
-
-	Git::CSignature sig("Johan", "johan@test.nl");
-
-	Git::CTreeBuilder treeB;
-	treeB.Insert(L"test1.txt", repo.WriteBlob("This is test file number 1...\n"));
-	treeB.Insert(L"test2.txt", repo.WriteBlob("This is test file number 2...\n"));
-
-	Git::COid oidTree = repo.Write(treeB);
-	Git::COid oidCommit = repo.Commit("HEAD", sig, sig, "Test commit 1", oidTree, Git::COids());
-
-	cout << "1st commit done: " << oidCommit << endl;
-
-	Git::CTreeBuilder treeB2(Git::CTree(repo, oidTree));
-	treeB2.Insert(L"test2.txt", repo.WriteBlob("This is test file number 2...\nA line has just been added to this file.\n"));
-	oidTree = repo.Write(treeB2);
-	oidCommit = repo.Commit("HEAD", sig, sig, "Test commit 2", oidTree, oidCommit);
-
-
-	cout << "2nd commit done: " << oidCommit << endl;
-
-
-	cout << "Doing svn stuff..." << endl;
-
-
-
-	//svn::Pool svnPool;
-
-	//svn::Client svnClient;
-	//const char* svnrepo = "file:///D:/Develop/test/gitsvnbug/svnrepo";
-
-#if 0
-	const svn::LogEntries* entries = G_svnClient->log(svnrepo, svn::Revision::START, svn::Revision::HEAD, true);
-
-	cout << "Log got " << entries->size() << " entries." << endl;
-	for(svn::LogEntries::const_iterator i = entries->begin(); i != entries->end(); ++i)
-	{
-		cout << "Rev[" << i->revision << "] " << i->message << endl;
-		for(std::list<svn::LogChangePathEntry>::const_iterator p = i->changedPaths.begin(); p != i->changedPaths.end(); ++p)
-		{
-			cout << " -" << p->action << ": " << p->path << endl;
-		}
-	}
-
-	delete entries;
-#endif
-
-	G_svnClient->log(&OnLogEntry, svnrepo, svn::Revision::START, svn::Revision::HEAD);
-	cout << endl << "Done." << endl;
 }
