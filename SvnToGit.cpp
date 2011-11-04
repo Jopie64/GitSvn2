@@ -177,7 +177,9 @@ struct RevSyncCtxt : RunCtxt
 		{
 			//TODO: copy tree and meta tree
 			if(copyfrom_path)
+			{
 				m_trees = ctxt->m_mapRev.Get(copyfrom_path, copyfrom_revision);
+			}
 		}
 		RevSyncCtxt* m_ctxt;
 		PropertyFile m_props;
@@ -283,34 +285,14 @@ struct RevSyncCtxt : RunCtxt
 		ReplayEditor editor;
 		editor.m_ctxt = this;
 		editor.replay(&m_svnRepo, entry.revision, 0, true);
-		//svn_ra_replay(m_svnRepo.GetInternalObj(), entry.revision, 0, true, editor.GetInternalObj(), (void*)&editor, editor.pool());
 
-		//Git::CTreeBuilder treeB(&*m_lastTree);
-/*		for(std::list<svn::LogChangePathEntry>::const_iterator i = entry.changedPaths.begin(); i != entry.changedPaths.end(); ++i)
-		{
-			try
-			{
-				cout << text.str() << ": " << i->path << " ..." << flush;
-				std::ostringstream os;
-				//G_svnClient->get(svn::Stream(os), m_svnRepoUrl + i->path, entry.revision);
-				m_svnRepo.getFile(svn::Stream(os), i->path.substr(1), entry.revision);
-				m_Tree_Content->Insert(i->path.c_str(), m_gitRepo.WriteBlob(os.str()));
-			}
-			catch(svn::ClientException& e)
-			{
-				if(e.apr_err() == SVN_ERR_CLIENT_IS_DIRECTORY)
-					cout << "jay!" << endl;
-				else if(e.apr_err() == SVN_ERR_FS_NOT_FILE)
-					cout << "jay2!" << endl;
-				else if(e.apr_err() == SVN_ERR_FS_NOT_FOUND)
-					cout << "Huh? " << e.message() << endl;
-				else
-					cout << "Oops: " << e.message() << endl;
-			}
-		}
-*/
 
 		Git::CTree tree(m_gitRepo, m_rootTree.Write(m_gitRepo));
+
+		//Cache the root tree
+		GitOids& rootOids = m_mapRev.Get("", entry.revision, false);
+		rootOids.m_oidContentTree = m_Tree_Content->m_oid;
+		rootOids.m_oidMetaTree = m_Tree_Meta->m_oid;
 
 		std::string author = entry.author;
 		if(author.empty())

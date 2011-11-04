@@ -32,9 +32,18 @@ GitOids& CMapGitSvnRev::Get(const std::string& path, svn_revnum_t rev, bool bMus
 		return m_Map[PathRev(path, rev)];
 
 	MapPathRev_Oid::iterator i = m_Map.find(PathRev(path, rev));
+	if(i != m_Map.end())
+		return i->second;
+
+	i = m_Map.find(PathRev("", rev));
 	if(i == m_Map.end())
-		throw svn::Exception(JStd::String::Format("Cannot find GIT blob for %s@%d", path.c_str(), rev).c_str());
-	return i->second;
+		throw svn::Exception(JStd::String::Format("Cannot find GIT oids for %s@%d", path.c_str(), rev).c_str());
+
+	GitOids oids;
+	oids.m_oidContentTree	= m_ctxt->m_gitRepo.TreeFind(i->second.m_oidContentTree, path.c_str()).Oid();
+	oids.m_oidMetaTree		= m_ctxt->m_gitRepo.TreeFind(i->second.m_oidMetaTree,	 path.c_str()).Oid();
+	oids.m_oidMeta			= m_ctxt->m_gitRepo.TreeFind(oids.m_oidMetaTree,		 ".svnDirectoryProps").Oid();
+	return m_Map[PathRev(path,rev)]= oids;
 }
 
 void PropertyFile::changeProp(const char *name, const svn_string_t *value)
