@@ -173,12 +173,14 @@ struct RevSyncCtxt : RunCtxt
 	class ReplayDir : public Directory
 	{
 	public:
-		ReplayDir(RevSyncCtxt* ctxt, svn_revnum_t rev, const char* copyfrom_path = NULL, svn_revnum_t copyfrom_revision = -1):m_ctxt(ctxt), m_rev(rev), m_props(ctxt)
+		ReplayDir(RevSyncCtxt* ctxt, svn_revnum_t rev, const char* path, const char* copyfrom_path = NULL, svn_revnum_t copyfrom_revision = -1):m_ctxt(ctxt), m_rev(rev), m_props(ctxt)
 		{
 			//TODO: copy tree and meta tree
 			if(copyfrom_path)
 			{
 				m_trees = ctxt->m_mapRev.Get(copyfrom_path, copyfrom_revision);
+				m_ctxt->m_gitRepo.BuildTreeNode(*m_ctxt->m_Tree_Content->GetByPath(path), m_trees.m_oidContentTree);
+				m_ctxt->m_gitRepo.BuildTreeNode(*m_ctxt->m_Tree_Meta->GetByPath(path),	  m_trees.m_oidMetaTree);
 			}
 		}
 		RevSyncCtxt* m_ctxt;
@@ -230,7 +232,7 @@ struct RevSyncCtxt : RunCtxt
 			if(copyfrom_path)
 				cout << " -" << copyfrom_path << "@" << copyfrom_revision;
 			cout << endl;
-			return new ReplayDir(m_ctxt, -1, copyfrom_path, copyfrom_revision);
+			return new ReplayDir(m_ctxt, -1, path, copyfrom_path, copyfrom_revision);
 		}
 
 		virtual Directory* open(const char* path, svn_revnum_t base_revision)
@@ -239,7 +241,7 @@ struct RevSyncCtxt : RunCtxt
 			if(base_revision >= 0)
 				cout << "@" << base_revision;
 			cout << endl;
-			return new ReplayDir(m_ctxt, base_revision);
+			return new ReplayDir(m_ctxt, base_revision, path);
 		}
 
 		virtual void deleteEntry(const char* path, svn_revnum_t revision)
@@ -264,7 +266,7 @@ struct RevSyncCtxt : RunCtxt
 		Directory* openRoot(svn_revnum_t base_revision)
 		{
 			cout << " root@" << base_revision << endl;
-			return new ReplayDir(m_ctxt, base_revision);
+			return new ReplayDir(m_ctxt, base_revision, "/");
 		}
 
 		RevSyncCtxt* m_ctxt;
