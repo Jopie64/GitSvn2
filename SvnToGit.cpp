@@ -105,9 +105,7 @@ struct RevSyncCtxt : RunCtxt
 		ReplayFile(RevSyncCtxt* ctxt, const char* copyfrom_path, svn_revnum_t copyfrom_rev):m_ctxt(ctxt), m_props(ctxt),m_bHasBeenRead(false), m_bModified(false), m_rev(-1), m_iWindowCount(0)
 		{
 			if(copyfrom_path)
-			{
 				m_blobs = m_ctxt->m_mapRev.Get(copyfrom_path, copyfrom_rev);
-			}
 			else
 				m_bHasBeenRead = true; //Does not have to be read
 			m_props.setCopyFrom(copyfrom_path, copyfrom_rev);
