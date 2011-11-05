@@ -102,7 +102,7 @@ struct RevSyncCtxt : RunCtxt
 		};
 
 		ReplayFile(RevSyncCtxt* ctxt, svn_revnum_t rev=0):m_ctxt(ctxt), m_props(ctxt), m_rev(rev), m_bHasBeenRead(false), m_bModified(false), m_iWindowCount(0){}
-		ReplayFile(RevSyncCtxt* ctxt, const char* copyfrom_path, svn_revnum_t copyfrom_rev):m_ctxt(ctxt), m_props(ctxt),m_bHasBeenRead(false), m_bModified(false), m_rev(-1), m_iWindowCount(0)
+		ReplayFile(RevSyncCtxt* ctxt, const char* copyfrom_path, svn_revnum_t copyfrom_rev):m_ctxt(ctxt), m_props(ctxt),m_bHasBeenRead(false), m_bModified(false), m_rev(SVN_INVALID_REVNUM), m_iWindowCount(0)
 		{
 			if(copyfrom_path)
 				m_blobs = m_ctxt->m_mapRev.Get(copyfrom_path, copyfrom_rev);
@@ -165,7 +165,7 @@ struct RevSyncCtxt : RunCtxt
 			if(!m_blobs.m_oidMeta.isNull())
 				m_ctxt->m_Tree_Meta->Insert(m_name.c_str(), m_blobs.m_oidMeta);
 			m_ctxt->m_mapRev.Get(m_name, m_editor->m_TargetRevision, false) = m_blobs;
-			m_ctxt->m_mapRev.Get(m_name, -1, false)							= m_blobs;
+			m_ctxt->m_mapRev.Get(m_name, SVN_INVALID_REVNUM, false)			= m_blobs;
 		}
 
 	};
@@ -173,13 +173,14 @@ struct RevSyncCtxt : RunCtxt
 	class ReplayDir : public Directory
 	{
 	public:
-		ReplayDir(RevSyncCtxt* ctxt, svn_revnum_t rev, const char* path, const char* copyfrom_path = NULL, svn_revnum_t copyfrom_revision = -1):m_ctxt(ctxt), m_rev(rev), m_props(ctxt)
+		ReplayDir(RevSyncCtxt* ctxt, svn_revnum_t rev, const char* path, const char* copyfrom_path = NULL, svn_revnum_t copyfrom_revision = SVN_INVALID_REVNUM):m_ctxt(ctxt), m_rev(rev), m_props(ctxt)
 		{
 			if(copyfrom_path)
 			{
 				GitOids& trees = ctxt->m_mapRev.Get(copyfrom_path, copyfrom_revision);
-				m_ctxt->m_gitRepo.BuildTreeNode(*m_ctxt->m_Tree_Content->GetByPath(path), trees.m_oidContentTree);
-				m_ctxt->m_gitRepo.BuildTreeNode(*m_ctxt->m_Tree_Meta->GetByPath(path),	  trees.m_oidMetaTree);
+				if(!trees.m_oidContentTree.isNull()) //Can be NULL because GIT does not support empty directories.
+					m_ctxt->m_gitRepo.BuildTreeNode(*m_ctxt->m_Tree_Content->GetByPath(path),	trees.m_oidContentTree);
+				m_ctxt->m_gitRepo.BuildTreeNode(*m_ctxt->m_Tree_Meta->GetByPath(path),			trees.m_oidMetaTree);
 				//TODO: should we remove the copy from data from the copied tree?
 			}
 			m_props.setCopyFrom(copyfrom_path, copyfrom_revision);
@@ -207,7 +208,7 @@ struct RevSyncCtxt : RunCtxt
 			m_trees.m_oidMeta = m_props.Write();
 			m_ctxt->m_Tree_Meta->Insert((m_name + "/.svnDirectoryProps").c_str(), m_trees.m_oidMeta);
 			m_ctxt->m_mapRev.Get(m_name + "/.svnDirectoryProps", m_rev, false) = m_trees;
-			m_ctxt->m_mapRev.Get(m_name + "/.svnDirectoryProps", -1, false) = m_trees;
+			m_ctxt->m_mapRev.Get(m_name + "/.svnDirectoryProps", SVN_INVALID_REVNUM, false) = m_trees;
 			//TODO: also update current revision
 		}
 
@@ -233,7 +234,7 @@ struct RevSyncCtxt : RunCtxt
 			if(copyfrom_path)
 				cout << " -" << copyfrom_path << "@" << copyfrom_revision;
 			cout << endl;
-			return new ReplayDir(m_ctxt, -1, path, copyfrom_path, copyfrom_revision);
+			return new ReplayDir(m_ctxt, SVN_INVALID_REVNUM, path, copyfrom_path, copyfrom_revision);
 		}
 
 		virtual Directory* open(const char* path, svn_revnum_t base_revision)
@@ -293,9 +294,10 @@ struct RevSyncCtxt : RunCtxt
 		Git::CTree tree(m_gitRepo, m_rootTree.Write(m_gitRepo));
 
 		//Cache the root tree
-		GitOids& rootOids = m_mapRev.Get("", entry.revision, false);
-		rootOids.m_oidContentTree = m_Tree_Content->m_oid;
-		rootOids.m_oidMetaTree = m_Tree_Meta->m_oid;
+		GitOids& rootOids			  = m_mapRev.Get("", entry.revision, false);
+		GitOids& rootOidsLast		  = m_mapRev.Get("", SVN_INVALID_REVNUM, false);
+		rootOidsLast.m_oidContentTree = rootOids.m_oidContentTree = m_Tree_Content->m_oid;
+		rootOidsLast.m_oidMetaTree	  = rootOids.m_oidMetaTree	  = m_Tree_Meta->m_oid;
 
 		std::string author = entry.author;
 		if(author.empty())

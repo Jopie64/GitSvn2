@@ -43,16 +43,17 @@ GitOids& CMapGitSvnRev::Get(const std::string& path, svn_revnum_t rev, bool bMus
 	Git::CTreeEntry contentEntry	= m_ctxt->m_gitRepo.TreeFind(i->second.m_oidContentTree, path.c_str());
 	Git::CTreeEntry metaEntry		= m_ctxt->m_gitRepo.TreeFind(i->second.m_oidMetaTree,	 path.c_str());
 
-	if(contentEntry.IsFile())
+	if(metaEntry.IsFile())
 	{
-		oids.m_oidContent		= contentEntry.Oid();
-		oids.m_oidMeta			= metaEntry.Oid();
+		oids.m_oidContent			= contentEntry.Oid();
+		oids.m_oidMeta				= metaEntry.Oid();
 	}
 	else
 	{
-		oids.m_oidContentTree	= contentEntry.Oid();
-		oids.m_oidMetaTree		= metaEntry.Oid();
-		oids.m_oidMeta			= m_ctxt->m_gitRepo.TreeFind(oids.m_oidMetaTree,		 ".svnDirectoryProps").Oid();
+		if(contentEntry.IsValid())
+			oids.m_oidContentTree	= contentEntry.Oid();
+		oids.m_oidMetaTree			= metaEntry.Oid();
+		oids.m_oidMeta				= m_ctxt->m_gitRepo.TreeFind(oids.m_oidMetaTree,		 ".svnDirectoryProps").Oid();
 	}
 	return m_Map[PathRev(path,rev)]= oids;
 }
