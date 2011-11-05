@@ -70,19 +70,18 @@ struct RevSyncCtxt : RunCtxt
 		class ReplayDeltaHandler : public ApplyDeltaHandler
 		{
 		public:
-			ReplayDeltaHandler(ReplayFile* file):m_file(file){}
+			ReplayDeltaHandler(ReplayFile* file):m_file(file), m_iWindow(0){}
 			ReplayFile* m_file;
+			int m_iWindow;
 			virtual void handleWindow(svn_txdelta_window_t *window)
 			{
+				++m_iWindow;
 				std::string& content = m_file->Content(window->sview_len != 0);
 				std::string out;
 				out.resize(window->tview_len);
 				apr_size_t size = out.size();
-				if(window->sview_len != 0)
+				if(window->sview_len != 0 && window->sview_len == content.size())
 				{
-					if(window->sview_len != content.size())
-						throw svn::Exception(JStd::String::Format("Content size mismatch of file %s. Expected %Id, got %Id.",
-												m_file->m_name.c_str(), window->sview_len, content.size()).c_str());
 					svn_txdelta_apply_instructions(window, content.c_str(), &*out.begin(), &size);
 					if(out.size() != size)
 						out.resize(size);
@@ -90,9 +89,12 @@ struct RevSyncCtxt : RunCtxt
 				}
 				else
 				{
+					if(window->sview_len > content.size())
+						throw svn::Exception(JStd::String::Format("Expected current content size of file %s was too small. Expected minimal %Id, got %Id.",
+												m_file->m_name.c_str(), window->sview_len, content.size()).c_str());
 					if(!content.empty())
-						cout << "Test" << endl;
-					svn_txdelta_apply_instructions(window, NULL, &*out.begin(), &size);
+						cout << "Window " << m_iWindow << "\r";
+					svn_txdelta_apply_instructions(window, window->sview_len == 0 ? NULL : &*(content.end() - window->sview_len), &*out.begin(), &size);
 					if(out.size() != size)
 						out.resize(size);
 					content += out;
@@ -196,7 +198,7 @@ struct RevSyncCtxt : RunCtxt
 			if(!m_new)
 			{
 				if(!m_name.empty())
-					m_trees = m_ctxt->m_mapRev.Get(m_name + "/.svnDirectoryProps", m_rev);
+					m_trees = m_ctxt->m_mapRev.Get(m_name, m_rev);
 			}
 			m_props.m_Oid = m_trees.m_oidMeta; //.m_fileName = m_name + "/.svnDirectoryProps";
 		}
@@ -207,8 +209,8 @@ struct RevSyncCtxt : RunCtxt
 				return;
 			m_trees.m_oidMeta = m_props.Write();
 			m_ctxt->m_Tree_Meta->Insert((m_name + "/.svnDirectoryProps").c_str(), m_trees.m_oidMeta);
-			m_ctxt->m_mapRev.Get(m_name + "/.svnDirectoryProps", m_rev, false) = m_trees;
-			m_ctxt->m_mapRev.Get(m_name + "/.svnDirectoryProps", SVN_INVALID_REVNUM, false) = m_trees;
+			m_ctxt->m_mapRev.Get(m_name, m_rev, false) = m_trees;
+			m_ctxt->m_mapRev.Get(m_name, SVN_INVALID_REVNUM, false) = m_trees;
 			//TODO: also update current revision
 		}
 
