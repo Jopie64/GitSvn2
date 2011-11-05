@@ -29,8 +29,8 @@ public:
 	void
     log(const LogEntryCb& cb,
 		const char * path,
-        const Revision & revisionStart,
-        const Revision & revisionEnd,
+        svn_revnum_t revisionStart,
+        svn_revnum_t revisionEnd,
         bool discoverChangedPaths = false,
         bool strictNodeHistory = true) throw(ClientException);
 

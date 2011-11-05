@@ -67,8 +67,8 @@ void Repo::getFile(Stream & dst,
 
 void Repo::log(const LogEntryCb& cb,
 		  const char * path,
-		  const Revision & revisionStart,
-		  const Revision & revisionEnd,
+		  svn_revnum_t revisionStart,
+		  svn_revnum_t revisionEnd,
 		  bool discoverChangedPaths,
 		  bool strictNodeHistory) throw(ClientException)
 {
