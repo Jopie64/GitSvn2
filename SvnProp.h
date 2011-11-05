@@ -17,8 +17,12 @@ public:
 
 	void Write(std::ostream& os);
 
+	void setCopyFrom(const char *path, svn_revnum_t rev);
 	void changeProp(const char *name, const svn_string_t *value);
 	
+
+	std::string m_copyFromPath;
+	svn_revnum_t m_copyFromRev;
 
 	MapProp m_NameVal;
 	

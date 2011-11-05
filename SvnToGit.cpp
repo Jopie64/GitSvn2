@@ -175,13 +175,14 @@ struct RevSyncCtxt : RunCtxt
 	public:
 		ReplayDir(RevSyncCtxt* ctxt, svn_revnum_t rev, const char* path, const char* copyfrom_path = NULL, svn_revnum_t copyfrom_revision = -1):m_ctxt(ctxt), m_rev(rev), m_props(ctxt)
 		{
-			//TODO: copy tree and meta tree
 			if(copyfrom_path)
 			{
 				m_trees = ctxt->m_mapRev.Get(copyfrom_path, copyfrom_revision);
 				m_ctxt->m_gitRepo.BuildTreeNode(*m_ctxt->m_Tree_Content->GetByPath(path), m_trees.m_oidContentTree);
 				m_ctxt->m_gitRepo.BuildTreeNode(*m_ctxt->m_Tree_Meta->GetByPath(path),	  m_trees.m_oidMetaTree);
+				//TODO: should we remove the copy from data from the copied tree?
 			}
+			m_props.setCopyFrom(copyfrom_path, copyfrom_revision);
 		}
 		RevSyncCtxt* m_ctxt;
 		PropertyFile m_props;

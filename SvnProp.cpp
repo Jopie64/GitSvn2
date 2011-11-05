@@ -2,6 +2,7 @@
 #include "SvnProp.h"
 
 CSvnProp::CSvnProp(void)
+:	m_copyFromRev(-1)
 {
 }
 
@@ -46,9 +47,43 @@ const char* CSvnProp::ReadSingle(const char* data, const char* dataEnd)
 
 void CSvnProp::Read(const char* data, const char* dataEnd)
 {
+	//Read 'copy from' data
+
+	//Rev
+	std::string value;
+	for(;data != dataEnd && !IsEnd(*data); ++data)
+		value += *data;
+
+	m_copyFromRev = atoi(value.c_str());
+
+	//Path
+	Skip(&data, dataEnd);
+	value.clear();
+	for(;data != dataEnd && !IsEnd(*data); ++data)
+		value += *data;
+
+	m_copyFromPath = value;
+
+	//Props
+	Skip(&data, dataEnd);
 	while(data != dataEnd)
 		data = ReadSingle(data, dataEnd);
 }
+
+void CSvnProp::setCopyFrom(const char *path, svn_revnum_t rev)
+{
+	if(path)
+	{
+		m_copyFromPath = path;
+		m_copyFromRev  = rev;
+	}
+	else
+	{
+		m_copyFromPath = "";
+		m_copyFromRev  = -1;
+	}
+}
+
 
 void CSvnProp::changeProp(const char *name, const svn_string_t *value)
 {
@@ -60,6 +95,7 @@ void CSvnProp::changeProp(const char *name, const svn_string_t *value)
 
 void CSvnProp::Write(std::ostream& os)
 {
+	os << m_copyFromRev << '\04' << m_copyFromPath << '\04' << std::endl;
 	for(MapProp::iterator i = m_NameVal.begin(); i != m_NameVal.end(); ++i)
 		os << i->first << std::endl << i->second << '\04' << std::endl << std::endl;
 }

@@ -46,17 +46,29 @@ GitOids& CMapGitSvnRev::Get(const std::string& path, svn_revnum_t rev, bool bMus
 	return m_Map[PathRev(path,rev)]= oids;
 }
 
+
+void PropertyFile::MaybeInit()
+{
+	if(m_bModified || m_Oid.isNull())
+		return; //Already initialized or dont need to
+
+	//Was not read yet and an original was known. So read it first.
+	Git::CBlob blob;
+	m_ctxt->m_gitRepo.Read(blob, m_Oid);
+	const char* content = (const char*)blob.Content();
+	m_Prop.Read(content, content + blob.Size());
+}
+
+void PropertyFile::setCopyFrom(const char *path, const svn_revnum_t rev)
+{
+	MaybeInit();
+	m_bModified = true;
+	m_Prop.setCopyFrom(path, rev);
+}
+
 void PropertyFile::changeProp(const char *name, const svn_string_t *value)
 {
-	if(!m_bModified && !m_Oid.isNull())
-	{
-		//Was not read yet and an original was known. So read it first.
-		Git::CBlob blob;
-		m_ctxt->m_gitRepo.Read(blob, m_Oid);
-		const char* content = (const char*)blob.Content();
-		m_Prop.Read(content, content + blob.Size());
-	}
-
+	MaybeInit();
 	m_bModified = true;
 	m_Prop.changeProp(name, value);
 }

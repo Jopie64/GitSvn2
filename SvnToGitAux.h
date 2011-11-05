@@ -63,6 +63,9 @@ public:
 
 	
 	void changeProp(const char *name, const svn_string_t *value);
+	void setCopyFrom(const char *path, svn_revnum_t rev);
+
+	void MaybeInit();
 	
 	Git::COid Write();
 
