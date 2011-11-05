@@ -281,8 +281,8 @@ struct RevSyncCtxt : RunCtxt
 
 		std::ostringstream text;
 
-		text << "\r*** Fetching rev " << entry.revision;
-		
+		text << "*** Fetching rev " << entry.revision;
+
 		cout << text.str() << " " << flush;
 
 		ReplayEditor editor;
@@ -326,9 +326,11 @@ struct RevSyncCtxt : RunCtxt
 void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char* refBaseName)
 {
 //	Git::CSignature sig("Johan", "johan@test.nl");
-	svn::Context* W_Context2Ptr = new svn::Context();
-	svn::Repo svnRepo(W_Context2Ptr, svnRepoUrl);
-	//svn::Repo svnRepo2(new svn::Context(), svnRepoUrl);
+//	svn::Context* W_Context2Ptr = new svn::Context();
+	//Need a separate repository for the log and for the replay.
+	//Or else the replay function will throw when using the svn protocol.
+	svn::Repo svnRepoLog(G_svnCtxt, svnRepoUrl);
+	svn::Repo svnRepoReplay(G_svnCtxt, svnRepoUrl); 
 
 	//svn::Repo svnRepo(G_svnCtxt, svnRepoUrl);
 
@@ -348,15 +350,15 @@ void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char
 
 	cout << "Fetching subversion log from " << svnRepoUrl << " ..." << endl;
 
-	RevSyncCtxt ctxt(gitRepo, svnRepo, svnRepoUrl);
+	RevSyncCtxt ctxt(gitRepo, svnRepoReplay, svnRepoUrl);
 	//ctxt.CheckExistingRefs();
 
 	ctxt.m_csBaseRefName = refBaseName;
 	//G_svnClient->log(std::tr1::bind(&RevSyncCtxt::OnSvnLogEntry, &ctxt, std::tr1::placeholders::_1),
-	svnRepo.log(std::tr1::bind(&RevSyncCtxt::OnSvnLogEntry, &ctxt, std::tr1::placeholders::_1),
+	svnRepoLog.log(std::tr1::bind(&RevSyncCtxt::OnSvnLogEntry, &ctxt, std::tr1::placeholders::_1),
 					 svnRepoUrl,
-					 svn::Revision::START,
-					 svn::Revision::HEAD,
+					 0,
+					 SVN_INVALID_REVNUM,
 					 true);
 	cout << "Done." << endl;
 }
