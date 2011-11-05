@@ -105,10 +105,12 @@ struct RevSyncCtxt : RunCtxt
 		ReplayFile(RevSyncCtxt* ctxt, const char* copyfrom_path, svn_revnum_t copyfrom_rev):m_ctxt(ctxt), m_props(ctxt),m_bHasBeenRead(false), m_bModified(false), m_rev(-1), m_iWindowCount(0)
 		{
 			if(copyfrom_path)
-				//TODO: Also find and copy meta blob
+			{
 				m_blobs = m_ctxt->m_mapRev.Get(copyfrom_path, copyfrom_rev);
+			}
 			else
 				m_bHasBeenRead = true; //Does not have to be read
+			m_props.setCopyFrom(copyfrom_path, copyfrom_rev);
 		}
 
 		RevSyncCtxt*	m_ctxt;
@@ -177,9 +179,9 @@ struct RevSyncCtxt : RunCtxt
 		{
 			if(copyfrom_path)
 			{
-				m_trees = ctxt->m_mapRev.Get(copyfrom_path, copyfrom_revision);
-				m_ctxt->m_gitRepo.BuildTreeNode(*m_ctxt->m_Tree_Content->GetByPath(path), m_trees.m_oidContentTree);
-				m_ctxt->m_gitRepo.BuildTreeNode(*m_ctxt->m_Tree_Meta->GetByPath(path),	  m_trees.m_oidMetaTree);
+				GitOids& trees = ctxt->m_mapRev.Get(copyfrom_path, copyfrom_revision);
+				m_ctxt->m_gitRepo.BuildTreeNode(*m_ctxt->m_Tree_Content->GetByPath(path), trees.m_oidContentTree);
+				m_ctxt->m_gitRepo.BuildTreeNode(*m_ctxt->m_Tree_Meta->GetByPath(path),	  trees.m_oidMetaTree);
 				//TODO: should we remove the copy from data from the copied tree?
 			}
 			m_props.setCopyFrom(copyfrom_path, copyfrom_revision);
