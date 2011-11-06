@@ -267,15 +267,81 @@ struct RevSyncCtxt : RunCtxt
 	class ReplayEditor : public Editor
 	{
 	public:
+		ReplayEditor(RevSyncCtxt* ctxt):m_ctxt(ctxt){}
+
 		Directory* openRoot(svn_revnum_t base_revision)
 		{
 			cout << " root@" << base_revision << endl;
 			return new ReplayDir(m_ctxt, base_revision, "/");
 		}
 
+		virtual void onFinish(svn_revnum_t rev, Properties& props)
+		{
+			std::string msg;
+			std::string author;
+			std::string date;
+			for(Properties::iterator i = props.begin(); i != props.end(); ++i)
+			{
+				if(i->first == "svn:log")
+					msg = i->second;
+				else if(i->first == "svn:author")
+					author = i->second;
+				else if(i->first == "svn:date")
+					date = i->second;
+			}
+			m_ctxt->Write(rev, msg, author, date);
+		}
+
 		RevSyncCtxt* m_ctxt;
 	};
 
+	class EditorMaker : public RangeReplay
+	{
+	public:
+		EditorMaker(RevSyncCtxt* ctxt):m_ctxt(ctxt){}
+		virtual Editor* makeEditor(svn_revnum_t rev, Properties& props)
+		{
+			cout << "** Fetching rev " << rev << endl;
+			return new ReplayEditor(m_ctxt);
+		}
+
+		RevSyncCtxt* m_ctxt;
+	};
+
+	void Write(svn_revnum_t rev, const std::string& log, std::string author, const std::string& date)
+	{
+		Git::CTree tree(m_gitRepo, m_rootTree.Write(m_gitRepo));
+
+		//Cache the root tree
+		GitOids& rootOids			  = m_mapRev.Get("", rev, false);
+		GitOids& rootOidsLast		  = m_mapRev.Get("", SVN_INVALID_REVNUM, false);
+		rootOidsLast.m_oidContentTree = rootOids.m_oidContentTree = m_Tree_Content->m_oid;
+		rootOidsLast.m_oidMetaTree	  = rootOids.m_oidMetaTree	  = m_Tree_Meta->m_oid;
+
+		if(author.empty())
+			author = "nobody";
+		Git::CSignature sig(author.c_str(), (author + "@svn").c_str());
+
+
+		std::ostringstream msg;
+		msg << "Rev: " << rev << endl
+			<< "Time: " << date << endl
+			<< "Msg:" << endl << log << endl;
+
+		Git::COids oids;
+		if(!m_lastCommit.isNull())
+			oids << m_lastCommit;
+		//m_lastCommit = m_gitRepo.Commit((m_csBaseRefName + "/_svnmeta").c_str(), sig, sig, msg.str().c_str(), tree, oids);
+		m_lastCommit = m_gitRepo.Commit(m_lastCommit.isNull() ? "HEAD" : SvnMetaRefName().c_str(), sig, sig, msg.str().c_str(), tree, m_gitRepo.ToCommits( oids));
+
+		cout << "r" << rev << "=" << m_lastCommit << endl;
+
+		if(oids.m_oids.empty())
+		{
+			//First commit done. Lets make a ref.
+			CheckExistingRefs();
+		}
+	}
 
 	void OnSvnLogEntry(const svn::LogEntry& entry)
 	{
@@ -288,8 +354,7 @@ struct RevSyncCtxt : RunCtxt
 
 		cout << text.str() << " " << flush;
 
-		ReplayEditor editor;
-		editor.m_ctxt = this;
+		ReplayEditor editor(this);
 		editor.replay(&m_svnRepo, entry.revision, 0, true);
 
 
@@ -323,11 +388,42 @@ struct RevSyncCtxt : RunCtxt
 			//First commit done. Lets make a ref.
 			CheckExistingRefs();
 		}
-
 	}
 };
 
 void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char* refBaseName)
+{
+	svn::Repo svnRepo(G_svnCtxt, svnRepoUrl);
+
+	Git::CRepo gitRepo;
+	try
+	{
+		gitRepo.Open((wstring(gitRepoPath) + L".git/").c_str());
+		cout << "Opened git repository on " << JStd::String::ToMult(gitRepoPath, CP_OEMCP) << endl;
+	}
+	catch(std::exception&)
+	{
+		cout << "Creating git repository on " << JStd::String::ToMult(gitRepoPath, CP_OEMCP) << "..." << endl;
+
+		gitRepo.Create(gitRepoPath, false);
+	}
+
+
+	cout << "Fetching subversion log from " << svnRepoUrl << " ..." << endl;
+
+	RevSyncCtxt ctxt(gitRepo, svnRepo, svnRepoUrl);
+	//ctxt.CheckExistingRefs();
+
+	ctxt.m_csBaseRefName = refBaseName;
+
+	RevSyncCtxt::EditorMaker editorMaker(&ctxt);
+	editorMaker.replay(&svnRepo, 1, svnRepo.head(), 1, true);
+
+
+	cout << "Done." << endl;
+}
+
+void SvnToGitSync_Old(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char* refBaseName)
 {
 //	Git::CSignature sig("Johan", "johan@test.nl");
 //	svn::Context* W_Context2Ptr = new svn::Context();
