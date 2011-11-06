@@ -357,37 +357,9 @@ struct RevSyncCtxt : RunCtxt
 		ReplayEditor editor(this);
 		editor.replay(&m_svnRepo, entry.revision, 0, true);
 
-
-		Git::CTree tree(m_gitRepo, m_rootTree.Write(m_gitRepo));
-
-		//Cache the root tree
-		GitOids& rootOids			  = m_mapRev.Get("", entry.revision, false);
-		GitOids& rootOidsLast		  = m_mapRev.Get("", SVN_INVALID_REVNUM, false);
-		rootOidsLast.m_oidContentTree = rootOids.m_oidContentTree = m_Tree_Content->m_oid;
-		rootOidsLast.m_oidMetaTree	  = rootOids.m_oidMetaTree	  = m_Tree_Meta->m_oid;
-
-		std::string author = entry.author;
-		if(author.empty())
-			author = "nobody";
-		Git::CSignature sig(author.c_str(), (author + "@svn").c_str());
-
-
-		std::ostringstream msg;
-		msg << "Rev: " << entry.revision << endl
-			<< "Time: " << entry.date << endl
-			<< "Msg:" << endl << entry.message << endl;
-
-		Git::COids oids;
-		if(!m_lastCommit.isNull())
-			oids << m_lastCommit;
-		//m_lastCommit = m_gitRepo.Commit((m_csBaseRefName + "/_svnmeta").c_str(), sig, sig, msg.str().c_str(), tree, oids);
-		m_lastCommit = m_gitRepo.Commit(m_lastCommit.isNull() ? "HEAD" : SvnMetaRefName().c_str(), sig, sig, msg.str().c_str(), tree, m_gitRepo.ToCommits( oids));
-
-		if(oids.m_oids.empty())
-		{
-			//First commit done. Lets make a ref.
-			CheckExistingRefs();
-		}
+		char date[APR_RFC822_DATE_LEN]; memset(date, 0, sizeof(date));
+		apr_rfc822_date(date, entry.date);
+		Write(entry.revision, entry.message, entry.author, date);
 	}
 };
 
