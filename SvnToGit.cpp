@@ -30,6 +30,38 @@ struct RevSyncCtxt : RunCtxt
 	Git::CTreeNode*	m_Tree_Content;
 	Git::CTreeNode*	m_Tree_Meta;
 
+	GitOids& SetOids(const std::string& path, svn_revnum_t rev = SVN_INVALID_REVNUM)
+	{
+		return m_mapRev.Get(path, rev, false);
+	}
+
+	GitOids GetOids(const std::string& path, svn_revnum_t rev = SVN_INVALID_REVNUM)
+	{
+		if(rev != SVN_INVALID_REVNUM)
+			return m_mapRev.Get(path, rev, true);
+
+		GitOids oids;
+		Git::CTreeNode* contentNode	= m_Tree_Content->GetByPath(path.c_str(), false);
+		Git::CTreeNode* metaNode	= m_Tree_Meta->GetByPath(path.c_str(), false);
+		if(!metaNode)
+			throw std::logic_error("Meta node should always exist...");
+
+		if(metaNode->IsFile())
+		{
+			if(!contentNode)
+				throw std::logic_error("Content node of file should have existed...");
+			oids.m_oidContent			= contentNode->m_oid;
+			oids.m_oidMeta				= metaNode->m_oid;
+		}
+		else
+		{
+			if(contentNode)
+				oids.m_oidContentTree	= contentNode->m_oid;
+			oids.m_oidMetaTree			= metaNode->m_oid;
+			oids.m_oidMeta				= metaNode->GetByPath(".svnDirectoryProps")->m_oid;
+		}
+		return oids;
+	}
 
 	std::string m_csBaseRefName;
 
@@ -107,7 +139,7 @@ struct RevSyncCtxt : RunCtxt
 		ReplayFile(RevSyncCtxt* ctxt, const char* copyfrom_path, svn_revnum_t copyfrom_rev):m_ctxt(ctxt), m_props(ctxt),m_bHasBeenRead(false), m_bModified(false), m_rev(SVN_INVALID_REVNUM), m_iWindowCount(0)
 		{
 			if(copyfrom_path)
-				m_blobs = m_ctxt->m_mapRev.Get(copyfrom_path, copyfrom_rev);
+				m_blobs = m_ctxt->GetOids(copyfrom_path, copyfrom_rev);
 			else
 				m_bHasBeenRead = true; //Does not have to be read
 			m_props.setCopyFrom(copyfrom_path, copyfrom_rev);
@@ -126,7 +158,7 @@ struct RevSyncCtxt : RunCtxt
 		void onInit()
 		{
 			if(!m_new)
-				m_blobs = m_ctxt->m_mapRev.Get(m_name, m_rev);
+				m_blobs = m_ctxt->GetOids(m_name, m_rev);
 			m_props.m_Oid = m_blobs.m_oidMeta;
 		}
 
@@ -166,8 +198,8 @@ struct RevSyncCtxt : RunCtxt
 			m_blobs.m_oidMeta = m_props.Write();
 			if(!m_blobs.m_oidMeta.isNull())
 				m_ctxt->m_Tree_Meta->Insert(m_name.c_str(), m_blobs.m_oidMeta);
-			m_ctxt->m_mapRev.Get(m_name, m_editor->m_TargetRevision, false) = m_blobs;
-			m_ctxt->m_mapRev.Get(m_name, SVN_INVALID_REVNUM, false)			= m_blobs;
+			m_ctxt->SetOids(m_name, m_editor->m_TargetRevision) = m_blobs;
+			m_ctxt->SetOids(m_name, SVN_INVALID_REVNUM)			= m_blobs;
 		}
 
 	};
@@ -179,7 +211,7 @@ struct RevSyncCtxt : RunCtxt
 		{
 			if(copyfrom_path)
 			{
-				GitOids& trees = ctxt->m_mapRev.Get(copyfrom_path, copyfrom_revision);
+				GitOids& trees = ctxt->GetOids(copyfrom_path, copyfrom_revision);
 				if(!trees.m_oidContentTree.isNull()) //Can be NULL because GIT does not support empty directories.
 					m_ctxt->m_gitRepo.BuildTreeNode(*m_ctxt->m_Tree_Content->GetByPath(path),	trees.m_oidContentTree);
 				m_ctxt->m_gitRepo.BuildTreeNode(*m_ctxt->m_Tree_Meta->GetByPath(path),			trees.m_oidMetaTree);
@@ -198,7 +230,7 @@ struct RevSyncCtxt : RunCtxt
 			if(!m_new)
 			{
 				if(!m_name.empty())
-					m_trees = m_ctxt->m_mapRev.Get(m_name, m_rev);
+					m_trees = m_ctxt->GetOids(m_name, m_rev);
 			}
 			m_props.m_Oid = m_trees.m_oidMeta; //.m_fileName = m_name + "/.svnDirectoryProps";
 		}
@@ -209,8 +241,8 @@ struct RevSyncCtxt : RunCtxt
 				return;
 			m_trees.m_oidMeta = m_props.Write();
 			m_ctxt->m_Tree_Meta->Insert((m_name + "/.svnDirectoryProps").c_str(), m_trees.m_oidMeta);
-			m_ctxt->m_mapRev.Get(m_name, m_rev, false) = m_trees;
-			m_ctxt->m_mapRev.Get(m_name, SVN_INVALID_REVNUM, false) = m_trees;
+			m_ctxt->SetOids(m_name, m_rev)				= m_trees;
+			m_ctxt->SetOids(m_name, SVN_INVALID_REVNUM)	= m_trees;
 			//TODO: also update current revision
 		}
 
@@ -313,8 +345,8 @@ struct RevSyncCtxt : RunCtxt
 		Git::CTree tree(m_gitRepo, m_rootTree.Write(m_gitRepo));
 
 		//Cache the root tree
-		GitOids& rootOids			  = m_mapRev.Get("", rev, false);
-		GitOids& rootOidsLast		  = m_mapRev.Get("", SVN_INVALID_REVNUM, false);
+		GitOids& rootOids			  = SetOids("", rev);
+		GitOids& rootOidsLast		  = SetOids("", SVN_INVALID_REVNUM);
 		rootOidsLast.m_oidContentTree = rootOids.m_oidContentTree = m_Tree_Content->m_oid;
 		rootOidsLast.m_oidMetaTree	  = rootOids.m_oidMetaTree	  = m_Tree_Meta->m_oid;
 

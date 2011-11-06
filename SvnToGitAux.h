@@ -49,7 +49,7 @@ public:
 	CMapGitSvnRev(RunCtxt* ctxt);
 	~CMapGitSvnRev(void);
 
-	GitOids& Get(const std::string& path, svn_revnum_t rev = -1, bool bMustExist = true);
+	GitOids& Get(const std::string& path, svn_revnum_t rev = SVN_INVALID_REVNUM, bool bMustExist = true);
 
 	RunCtxt*		m_ctxt;
 	MapPathRev_Oid	m_Map;
