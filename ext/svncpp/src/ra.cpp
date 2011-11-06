@@ -90,4 +90,12 @@ void Repo::log(const LogEntryCb& cb,
 								 pool));
 }
 
+svn_revnum_t Repo::head()
+{
+	Pool pool;
+	svn_revnum_t ret = 0;
+	ThrowIfError(svn_ra_get_latest_revnum(GetInternalObj(), &ret, pool));
+	return ret;
+}
+
 } //namespace svn

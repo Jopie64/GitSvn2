@@ -34,6 +34,8 @@ public:
         bool discoverChangedPaths = false,
         bool strictNodeHistory = true) throw(ClientException);
 
+	svn_revnum_t head();
+
 };
 
 
