@@ -214,6 +214,8 @@ struct RevSyncCtxt : RunCtxt
 				GitOids& trees = ctxt->GetOids(copyfrom_path, copyfrom_revision);
 				if(!trees.m_oidContentTree.isNull()) //Can be NULL because GIT does not support empty directories.
 					m_ctxt->m_gitRepo.BuildTreeNode(*m_ctxt->m_Tree_Content->GetByPath(path),	trees.m_oidContentTree);
+				if(trees.m_oidMetaTree.isNull())
+					throw std::logic_error("Meta data should never be null for an existing path.");
 				m_ctxt->m_gitRepo.BuildTreeNode(*m_ctxt->m_Tree_Meta->GetByPath(path),			trees.m_oidMetaTree);
 				//TODO: should we remove the copy from data from the copied tree?
 			}
