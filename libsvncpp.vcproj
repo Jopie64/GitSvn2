@@ -282,6 +282,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ext\svncpp\include\svncpp\apr_hash.hpp"
+				>
+			</File>
+			<File
 				RelativePath="ext\svncpp\include\svncpp\client.hpp"
 				>
 			</File>
