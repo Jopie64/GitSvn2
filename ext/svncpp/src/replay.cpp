@@ -63,7 +63,7 @@ svn_error_t *replay_revstart(
 	try
 	{
 		Properties props(rev_props);
-		Editor* newEditor	= replay->makeEditor(props);
+		Editor* newEditor	= replay->makeEditor(revision, props);
 		*edit_baton			= newEditor;
 		*editor				= newEditor->GetInternalObj();
 	}
@@ -85,7 +85,8 @@ svn_error_t *replay_revfinish(
 
 	try
 	{
-		edit->onFinish();
+		Properties props(rev_props);
+		edit->onFinish(revision, props);
 	}
 	catch(svn::ClientException& e){ delete edit; return e.detach(); }
 	delete edit;
@@ -101,7 +102,7 @@ void RangeReplay::replay(Repo* repo,
 			svn_boolean_t send_deltas)
 {
 	Pool pool;
-	ThrowIfError(svn_ra_replay_range(repo->GetInternalObj(), revStart, revEnd, low_water_mark, send_deltas, &callbacks::replay_revstart, callbacks::replay_revfinish, this, pool));
+	ThrowIfError(svn_ra_replay_range(repo->GetInternalObj(), revStart, revEnd, low_water_mark, send_deltas, &callbacks::replay_revstart, &callbacks::replay_revfinish, this, pool));
 }
 
 

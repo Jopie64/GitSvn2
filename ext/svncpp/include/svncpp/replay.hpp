@@ -11,6 +11,16 @@ class Editor;
 class Directory;
 class File;
 
+class Properties : public AprHashCpp<const char, svn_string_t, std::string, std::string>
+{
+public:
+	Properties(apr_hash_t* hash):AprHashCpp(hash) {}
+
+//	virtual void toOrigKey((orig_key_type*)& dest, const key_type& src);
+	virtual void toKeyCpp(key_type& dest, const orig_key_type* src) { dest = src; }
+	virtual void toRightCpp(right_type& dest, const orig_right_type* src) { dest = src->data; }
+};
+
 class DirEntry
 {
 public:
@@ -68,7 +78,7 @@ public:
 	virtual void		onTargetRevision(svn_revnum_t target_revision){}
 	virtual Directory*	openRoot(svn_revnum_t base_revision) =0;
 
-	virtual void		onFinish(){};
+	virtual void		onFinish(svn_revnum_t rev, Properties& props){};
 
 	void replay(  Repo* repo,
 				  svn_revnum_t revision,
@@ -78,22 +88,13 @@ public:
 	svn_revnum_t m_TargetRevision;
 };
 
-class Properties : public AprHashCpp<const char*, svn_string_t, std::string, std::string>
-{
-public:
-	Properties(apr_hash_t* hash):AprHashCpp(hash) {}
-
-	virtual void toKeyCpp(key_type& dest, const orig_key_type* src) { dest = *src; }
-	virtual void toRightCpp(right_type& dest, const orig_right_type* src) { dest = src->data; }
-};
-
 class RangeReplay: Uncopyable
 {
 public:
 	RangeReplay();
 	virtual ~RangeReplay();
 
-	virtual Editor* makeEditor(Properties& props) =0;
+	virtual Editor* makeEditor(svn_revnum_t rev, Properties& props) =0;
 
 	void replay(Repo* repo,
 			svn_revnum_t revStart,
