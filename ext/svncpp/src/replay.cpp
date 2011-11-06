@@ -37,6 +37,74 @@ ApplyDeltaHandler::ApplyDeltaHandler()
 {
 }
 
+
+// *** RangeReplay
+RangeReplay::RangeReplay()
+{
+}
+
+RangeReplay::~RangeReplay()
+{
+}
+
+namespace callbacks
+{
+
+svn_error_t *replay_revstart(
+  svn_revnum_t revision,
+  void *replay_baton,
+  const svn_delta_editor_t **editor,
+  void **edit_baton,
+  apr_hash_t *rev_props,
+  apr_pool_t *pool)
+{
+	RangeReplay* replay = (RangeReplay*)replay_baton;
+
+	try
+	{
+		Properties props(rev_props);
+		Editor* newEditor	= replay->makeEditor(props);
+		*edit_baton			= newEditor;
+		*editor				= newEditor->GetInternalObj();
+	}
+	catch(svn::ClientException& e){ return e.detach(); }
+
+	return NULL;
+}
+
+svn_error_t *replay_revfinish(
+  svn_revnum_t revision,
+  void *replay_baton,
+  const svn_delta_editor_t *editor,
+  void *edit_baton,
+  apr_hash_t *rev_props,
+  apr_pool_t *pool)
+{
+	RangeReplay* replay = (RangeReplay*)replay_baton;
+	Editor* edit = (Editor*)edit_baton;
+
+	try
+	{
+		edit->onFinish();
+	}
+	catch(svn::ClientException& e){ delete edit; return e.detach(); }
+	delete edit;
+	return NULL;
+}
+
+}//namespace callbacks
+
+void RangeReplay::replay(Repo* repo,
+			svn_revnum_t revStart,
+			svn_revnum_t revEnd,
+			svn_revnum_t low_water_mark,
+			svn_boolean_t send_deltas)
+{
+	Pool pool;
+	ThrowIfError(svn_ra_replay_range(repo->GetInternalObj(), revStart, revEnd, low_water_mark, send_deltas, &callbacks::replay_revstart, callbacks::replay_revfinish, this, pool));
+}
+
+
 namespace callbacks
 {
 

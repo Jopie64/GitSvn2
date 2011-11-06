@@ -1,5 +1,6 @@
 #pragma once
 #include "svncpp/ra.hpp"
+#include "svncpp/apr_hash.hpp"
 
 namespace svn
 {
@@ -67,12 +68,39 @@ public:
 	virtual void		onTargetRevision(svn_revnum_t target_revision){}
 	virtual Directory*	openRoot(svn_revnum_t base_revision) =0;
 
+	virtual void		onFinish(){};
+
 	void replay(  Repo* repo,
 				  svn_revnum_t revision,
 				  svn_revnum_t low_water_mark,
 				  svn_boolean_t send_deltas);
 
 	svn_revnum_t m_TargetRevision;
+};
+
+class Properties : public AprHashCpp<const char*, svn_string_t, std::string, std::string>
+{
+public:
+	Properties(apr_hash_t* hash):AprHashCpp(hash) {}
+
+	virtual void toKeyCpp(key_type& dest, const orig_key_type* src) { dest = *src; }
+	virtual void toRightCpp(right_type& dest, const orig_right_type* src) { dest = src->data; }
+};
+
+class RangeReplay: Uncopyable
+{
+public:
+	RangeReplay();
+	virtual ~RangeReplay();
+
+	virtual Editor* makeEditor(Properties& props) =0;
+
+	void replay(Repo* repo,
+			svn_revnum_t revStart,
+			svn_revnum_t revEnd,
+			svn_revnum_t low_water_mark,
+			svn_boolean_t send_deltas);
+
 };
 
 
