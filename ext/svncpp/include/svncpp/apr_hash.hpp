@@ -11,32 +11,44 @@ template<class key, class value>
 class AprHash
 {
 public:
-	typedef key									key_type;
-	typedef value								right_type;
-	typedef std::pair<key_type*, right_type*>	value_type;
+	typedef key												key_type;
+	typedef value											right_type;
+	typedef std::pair<const key_type*, right_type*>			value_type;
 
-	class iterator : std::iterator<std::forward_iterator_tag, value_type>
+	class iterator : public std::iterator<std::forward_iterator_tag, value_type>
 	{
 	friend AprHash;
 	public:
-		iterator():ix(NULL){}
+		iterator():m_ix(NULL){}
 
 		bool operator==(const iterator& that) const { return m_ix == that.m_ix; }
 		bool operator!=(const iterator& that) const { return m_ix != that.m_ix; }
 
-		iterator& operator++(){ ensureValid(); apr_hash_next(m_ix); init(); return *this; }
+		iterator& operator++(){ ensureValid(); m_ix = apr_hash_next(m_ix); init(); return *this; }
 		iterator  operator++(int){ iterator next(*this); ++next; return next; }
 
 		value_type& operator*(){ ensureValid(); return m_val; }
 		value_type* operator->(){ ensureValid(); return &m_val; }
 
-		void ensureValid()const { if(!m_ix) throw std::logic_error("Dont do this with an invalid iterator!"); }
+		void ensureValid()const { if(!isValid()) throw std::logic_error("Dont do this with an invalid iterator!"); }
 
+		bool isValid() const { return !!m_ix; }
 
-	protected:
-		iterator(apr_hash_index_t* ix):m_ix(ix) {}
+	//Only public because AprHashCpp::iterator (which is not derived from this) needs it
+	//protected:
+		virtual void		init()
+		{
+			if(!m_ix) return;
+			const void* key=0;
+			void* right=0;
 
-		virtual void		init() { if(!m_ix) return; apr_hash_this(m_ix, &m_val.first, NULL, &m_val.second); }
+			apr_hash_this(m_ix, &key, NULL, &right);
+			m_val.first = (key_type*)key;
+			m_val.second = (right_type*)right;
+		}
+
+		iterator(apr_hash_index_t* ix):m_ix(ix) { init(); }
+
 		apr_hash_index_t*	m_ix;
 		value_type			m_val;
 
@@ -47,6 +59,7 @@ public:
 
 	iterator begin() { return apr_hash_first(m_pool, m_hash); }
 	iterator end() { return iterator(); }
+//	iterator find(key_type* key) { apr_hash_get(
 
 	apr_hash_t* m_hash;
 	Pool		m_pool;
@@ -63,32 +76,48 @@ public:
 	typedef keycpp							key_type;
 	typedef valuecpp						right_type;
 	typedef std::pair<keycpp, right_type>	value_type;
+	typedef typename AprHash::iterator		base_iterator;
 
-	class iterator : public AprHash::iterator
+	class iterator : public std::iterator<std::forward_iterator_tag, value_type>
 	{
+	friend AprHashCpp;
 	public:
-		iterator(apr_hash_index_t* ix, AprHashCpp* cont):AprHash::iterator(ix), m_cont(cont){}
+		iterator():m_cont(NULL){}
+		iterator(base_iterator i, AprHashCpp* cont):m_baseIterator(i), m_cont(cont){ init(); }
 
-		value_type& operator*(){ ensureValid(); return m_valcpp; }
-		value_type* operator->(){ ensureValid(); return &m_valcpp; }
+		bool operator==(const iterator& that) const { return m_baseIterator == that.m_baseIterator; }
+		bool operator!=(const iterator& that) const { return m_baseIterator != that.m_baseIterator; }
+
+		iterator& operator++(){ ++m_baseIterator; init(); return *this; }
+		iterator  operator++(int){ iterator next(*this); ++next; return next; }
+
+		value_type& operator*(){ m_baseIterator.ensureValid(); return m_valcpp; }
+		value_type* operator->(){ m_baseIterator.ensureValid(); return &m_valcpp; }
 
 	private:
+		iterator(AprHashCpp* cont):m_cont(cont){}
 		virtual void init()
 		{
-			if(!m_ix) return;
-			AprHash::iterator::init();
-			m_cont->toKeyCpp(m_valcpp.first, m_val.first);
-			m_cont->ToValueCpp(m_valcpp.second, m_val.second);
+			if(!m_baseIterator.isValid()) return;
+			m_cont->toKeyCpp(m_valcpp.first, m_baseIterator.m_val.first);
+			m_cont->toRightCpp(m_valcpp.second, m_baseIterator.m_val.second);
 		}
 
+		base_iterator m_baseIterator;
 		AprHashCpp* m_cont;
 		value_type m_valcpp;
 	};
 
 	AprHashCpp(apr_hash_t* hash):AprHash(hash){}
 
+	iterator begin() { return iterator(AprHash::begin(), this); }
+	iterator end() { return iterator(this); }
+//	iterator find(const key_type& key) { orig_key_type* okey = 0; toOrigKey(okey, key); return iterator(AprHash::find(okey), this); }
+
+//	virtual void toOrigKey(orig_key_type*& dest, const key_type& src) =0; //Destination needs to remain while src remains
 	virtual void toKeyCpp(key_type& dest, const orig_key_type* src) =0;
 	virtual void toRightCpp(right_type& dest, const orig_right_type* src) =0;
+
 };
 
 }
