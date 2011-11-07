@@ -185,6 +185,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\SetSvnPath.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\stdafx.cpp"
 				>
 				<FileConfiguration
@@ -208,10 +212,6 @@
 				RelativePath=".\SvnProp.cpp"
 				>
 			</File>
-			<File
-				RelativePath=".\SvnToGit.cpp"
-				>
-			</File>
 			<Filter
 				Name="Ext"
 				>
@@ -221,6 +221,14 @@
 				</File>
 				<File
 					RelativePath=".\ext\GitCpp\jstd\JStd.cpp"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="Cmd"
+				>
+				<File
+					RelativePath=".\SvnToGit.cpp"
 					>
 				</File>
 			</Filter>
@@ -247,10 +255,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\SvnToGit.h"
-				>
-			</File>
-			<File
 				RelativePath=".\targetver.h"
 				>
 			</File>
@@ -263,6 +267,14 @@
 				</File>
 				<File
 					RelativePath=".\ext\GitCpp\jstd\JStd.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="Cmd"
+				>
+				<File
+					RelativePath=".\SvnToGit.h"
 					>
 				</File>
 			</Filter>
