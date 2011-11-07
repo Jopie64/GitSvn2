@@ -49,13 +49,17 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	}
 
-	catch(exception& e)
+	catch(Git::CGitException& e)
 	{
-		cout << "Something went wrong: " << e.what() << endl;
+		cout << "Git exception: " << e.what() << endl;
 	}
 	catch(svn::Exception& e)
 	{
-		cout << "Some subversion stuff went wrong: " << e.message() << endl;
+		cout << "Subversion exception: " << e.message() << endl;
+	}
+	catch(exception& e)
+	{
+		cout << "General exception: " << e.what() << endl;
 	}
 
 	delete G_svnCtxt;

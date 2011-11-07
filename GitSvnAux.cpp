@@ -1,7 +1,7 @@
 #include "StdAfx.h"
-#include "SvnToGitAux.h"
+#include "GitSvnAux.h"
 
-namespace SvnToGit {
+namespace GitSvn {
 
 PathRev::PathRev(const std::string& path, svn_revnum_t rev)
 :	m_path(path),m_rev(rev)

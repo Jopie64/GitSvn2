@@ -13,7 +13,7 @@
 //#include "svncpp\client.hpp"
 #include "svncpp\replay.hpp"
 
-namespace SvnToGit {
+namespace GitSvn {
 
 struct RunCtxt;
 

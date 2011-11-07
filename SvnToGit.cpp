@@ -1,7 +1,7 @@
 #include "StdAfx.h"
 #include "SvnToGit.h"
 
-#include "SvnToGitAux.h"
+#include "GitSvnAux.h"
 #include "svncpp/client.hpp"
 using namespace std;
 
@@ -10,7 +10,7 @@ extern svn::Context* G_svnCtxt;
 
 using namespace svn::replay;
 
-using namespace SvnToGit;
+using namespace GitSvn;
 
 struct RevSyncCtxt : RunCtxt
 {
