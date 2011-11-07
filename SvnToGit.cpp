@@ -376,25 +376,6 @@ struct RevSyncCtxt : RunCtxt
 			CheckExistingRefs();
 		}
 	}
-
-	void OnSvnLogEntry(const svn::LogEntry& entry)
-	{
-		if(entry.revision == 0)
-			return; //Skip rev 0..
-
-		std::ostringstream text;
-
-		text << "*** Fetching rev " << entry.revision;
-
-		cout << text.str() << " " << flush;
-
-		ReplayEditor editor(this);
-		editor.replay(&m_svnRepo, entry.revision, 0, true);
-
-		char date[APR_RFC822_DATE_LEN]; memset(date, 0, sizeof(date));
-		apr_rfc822_date(date, entry.date);
-		Write(entry.revision, entry.message, entry.author, date);
-	}
 };
 
 void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char* refBaseName)
@@ -426,45 +407,5 @@ void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char
 	editorMaker.replay(&svnRepo, 1, svnRepo.head(), 1, true);
 
 
-	cout << "Done." << endl;
-}
-
-void SvnToGitSync_Old(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char* refBaseName)
-{
-//	Git::CSignature sig("Johan", "johan@test.nl");
-//	svn::Context* W_Context2Ptr = new svn::Context();
-	//Need a separate repository for the log and for the replay.
-	//Or else the replay function will throw when using the svn protocol.
-	svn::Repo svnRepoLog(G_svnCtxt, svnRepoUrl);
-	svn::Repo svnRepoReplay(G_svnCtxt, svnRepoUrl); 
-
-	//svn::Repo svnRepo(G_svnCtxt, svnRepoUrl);
-
-	Git::CRepo gitRepo;
-	try
-	{
-		gitRepo.Open((wstring(gitRepoPath) + L".git/").c_str());
-		cout << "Opened git repository on " << JStd::String::ToMult(gitRepoPath, CP_OEMCP) << endl;
-	}
-	catch(std::exception&)
-	{
-		cout << "Creating git repository on " << JStd::String::ToMult(gitRepoPath, CP_OEMCP) << "..." << endl;
-
-		gitRepo.Create(gitRepoPath, false);
-	}
-
-
-	cout << "Fetching subversion log from " << svnRepoUrl << " ..." << endl;
-
-	RevSyncCtxt ctxt(gitRepo, svnRepoReplay, svnRepoUrl);
-	//ctxt.CheckExistingRefs();
-
-	ctxt.m_csBaseRefName = refBaseName;
-	//G_svnClient->log(std::tr1::bind(&RevSyncCtxt::OnSvnLogEntry, &ctxt, std::tr1::placeholders::_1),
-	svnRepoLog.log(std::tr1::bind(&RevSyncCtxt::OnSvnLogEntry, &ctxt, std::tr1::placeholders::_1),
-					 svnRepoUrl,
-					 0,
-					 SVN_INVALID_REVNUM,
-					 true);
 	cout << "Done." << endl;
 }

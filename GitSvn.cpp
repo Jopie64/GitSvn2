@@ -65,20 +65,14 @@ int _tmain(int argc, _TCHAR* argv[])
 	return 0;
 }
 
-void OnLogEntry(const svn::LogEntry& entry)
-{
-
-
-	cout << "\r[Rev: " << entry.revision << "]" << flush; //<< entry.message.substr(0,50) << flush;
-}
-
 void Test()
 {
 	Git::CRepo repo;
 	static const wchar_t* testRepoPath = L"D:/Test/gitsvn/gitpart/";
 	//const char* svnrepo = "svn://jdmstorage.jdm1.maassluis/johan/";
+	const char* svnrepo = "svn://jdmstorage.jdm1.maassluis/main/";
 	//const char* svnrepo = "file:///d:/Develop/test/gitsvnbug/svnrepo";
-	const char* svnrepo = "http://gwt-multipage.googlecode.com/svn";
+	//const char* svnrepo = "http://gwt-multipage.googlecode.com/svn";
 	//const char* svnrepo = "file:///H://Temp//marco";
 
 	SvnToGitSync(testRepoPath, svnrepo);
