@@ -1,9 +1,29 @@
 #include "StdAfx.h"
 #include "SvnToGit.h"
+#include "CmdLine.h"
 
 #include "GitSvnAux.h"
 #include "svncpp/client.hpp"
 using namespace std;
+
+
+
+void onSvnToGitInit(int argc, wchar_t* argv[]);
+static bool registered = CmdLine::Register(L"init", &onSvnToGitInit);
+
+void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char* refBaseName);
+void onSvnToGitInit(int argc, wchar_t* argv[])
+{
+	if(argc < 4)
+		CmdLine::throwUsage(L"<git repo path> <svn repo path> [remote name]");
+
+	std::string remoteName = "refs/remotes/";
+	if(argc > 4)
+		remoteName += JStd::String::ToMult(argv[4], CP_UTF8);
+	else
+		remoteName += "svn";
+	SvnToGitSync(argv[2], JStd::String::ToMult(argv[3], CP_UTF8).c_str(), remoteName.c_str());
+}
 
 
 extern svn::Context* G_svnCtxt;

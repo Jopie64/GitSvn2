@@ -5,6 +5,7 @@
 #include "GitCpp\Git.h"
 #include <iostream>
 #include "GitCpp\jstd\JStd.h"
+#include "CmdLine.h"
 
 
 #include <windows.h>
@@ -45,10 +46,21 @@ int _tmain(int argc, _TCHAR* argv[])
 	{
 		G_svnCtxt = new svn::Context();
 
-		Test();
-
+		//Test();
+		if(argc < 2)
+			CmdLine::throwUsage(L"<command> <params>");
+		CmdLine::Call(argv[1], argc, argv);
 	}
 
+	catch(CmdLine::CUsageException& e)
+	{
+		if(argc > 1)
+			wcout << L"Usage: " << argv[0] << L" " << argv[1];
+		else if(argc > 0)
+			wcout << L"Usage: " << argv[0];
+
+		wcout << L" " << e.m_usage << endl;
+	}
 	catch(Git::CGitException& e)
 	{
 		cout << "Git exception: " << e.what() << endl;
