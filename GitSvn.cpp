@@ -76,8 +76,10 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	delete G_svnCtxt;
 
+#ifdef _DEBUG
 	char c;
 	cin >> c;
+#endif
 	return 0;
 }
 

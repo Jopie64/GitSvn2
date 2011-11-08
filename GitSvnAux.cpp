@@ -97,6 +97,31 @@ Git::COid PropertyFile::Write()
 	return m_Oid;
 }
 
+std::string wtoa(const std::wstring& str)
+{
+	return JStd::String::ToMult(str, CP_ACP);
+}
+
+std::wstring atow(const std::string& str)
+{
+	return JStd::String::ToWide(str, CP_ACP);
+}
+
+std::string toRef(const std::string& remoteName, eRefType type)
+{
+	switch(type)
+	{
+	case eRT_meta:	return JStd::String::Format("refs/remotes/%s/_svnmeta", remoteName.c_str());
+	}
+	throw std::logic_error("toRef() unknown ref type");
+}
+
+void openCur(Git::CRepo& repo)
+{
+	repo.Open(Git::CRepo::DiscoverPath(L".").c_str());
+}
+
+
 #pragma warning(disable: 4355) //This used in member initializer list
 RunCtxt::RunCtxt(Git::CRepo& gitRepo)
 :	m_gitRepo(gitRepo),

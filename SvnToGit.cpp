@@ -8,11 +8,11 @@ using namespace std;
 
 
 
-void onSvnToGitInit(int argc, wchar_t* argv[]);
-static bool registered = CmdLine::Register(L"init", &onSvnToGitInit);
+void onClone(int argc, wchar_t* argv[]);
+static bool registered = CmdLine::Register(L"clone", &onClone);
 
 void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char* refBaseName);
-void onSvnToGitInit(int argc, wchar_t* argv[])
+void onClone(int argc, wchar_t* argv[])
 {
 	if(argc < 4)
 		CmdLine::throwUsage(L"<git repo path> <svn repo path> [remote name]");

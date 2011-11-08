@@ -185,10 +185,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\SetSvnPath.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\stdafx.cpp"
 				>
 				<FileConfiguration
@@ -227,6 +223,10 @@
 			<Filter
 				Name="Cmd"
 				>
+				<File
+					RelativePath=".\SetSvnPath.cpp"
+					>
+				</File>
 				<File
 					RelativePath=".\SvnToGit.cpp"
 					>

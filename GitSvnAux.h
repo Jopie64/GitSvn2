@@ -75,6 +75,17 @@ public:
 	Git::COid		m_Oid;
 };
 
+std::string  wtoa(const std::wstring& str);
+std::wstring atow(const std::string& str);
+
+enum eRefType
+{
+	eRT_meta
+};
+
+std::string  toRef(const std::string& remoteName, eRefType type);
+
+void		 openCur(Git::CRepo& repo);
 
 struct RunCtxt
 {
@@ -82,7 +93,6 @@ struct RunCtxt
 
 	Git::CRepo&		m_gitRepo;
 	CMapGitSvnRev	m_mapRev;
-
 
 };
 
