@@ -93,7 +93,7 @@ void Test()
 	//const char* svnrepo = "http://gwt-multipage.googlecode.com/svn";
 	//const char* svnrepo = "file:///H://Temp//marco";
 
-	SvnToGitSync(testRepoPath, svnrepo);
+	SvnToGitSync(testRepoPath, svnrepo, "svn");
 
 	return;
 

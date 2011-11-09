@@ -4,12 +4,15 @@
 
 #include "GitSvnAux.h"
 #include "svncpp/client.hpp"
+#include <sstream>
 using namespace std;
 
 
 
 void onClone(int argc, wchar_t* argv[]);
-static bool registered = CmdLine::Register(L"clone", &onClone);
+void onFetch(int argc, wchar_t* argv[]);
+static bool registered1 = CmdLine::Register(L"clone", &onClone);
+static bool registered2 = CmdLine::Register(L"fetch", &onFetch);
 
 void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char* refBaseName);
 void onClone(int argc, wchar_t* argv[])
@@ -17,11 +20,11 @@ void onClone(int argc, wchar_t* argv[])
 	if(argc < 4)
 		CmdLine::throwUsage(L"<git repo path> <svn repo path> [remote name]");
 
-	std::string remoteName = "refs/remotes/";
+	std::string remoteName;
 	if(argc > 4)
-		remoteName += JStd::String::ToMult(argv[4], CP_UTF8);
+		remoteName = JStd::String::ToMult(argv[4], CP_UTF8);
 	else
-		remoteName += "svn";
+		remoteName = "svn";
 	SvnToGitSync(argv[2], JStd::String::ToMult(argv[3], CP_UTF8).c_str(), remoteName.c_str());
 }
 
@@ -105,7 +108,7 @@ struct RevSyncCtxt : RunCtxt
 
 	std::string SvnMetaRefName()
 	{
-		return m_csBaseRefName + "/_svnmeta";
+		return GitSvn::toRef(m_csBaseRefName, GitSvn::eRT_meta);
 	}
 
 	static std::string MakeGitPathName(std::string src)
@@ -428,4 +431,45 @@ void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char
 
 
 	cout << "Done." << endl;
+}
+
+void onFetch(int argc, wchar_t* argv[])
+{
+	Git::CRepo gitRepo;
+	GitSvn::openCur(gitRepo);
+
+	string remote;
+	if(argc > 2)
+		remote = GitSvn::wtoa(argv[2]);
+	else
+		remote = "svn";
+
+	std::string svnPath;
+	Git::CCommitWalker walker;
+	walker.Init(gitRepo);
+	walker.AddRev(gitRepo.GetRef(GitSvn::toRef(remote, GitSvn::eRT_meta).c_str()).Oid());
+	for(;!walker.End(); ++walker)
+	{
+		Git::CCommit commit(gitRepo, walker.Curr());
+		istringstream msg(commit.Message());
+		string line;
+		int rev = 0;
+		while(getline(msg, line))
+		{
+			if(strncmp(line.c_str(), "SvnPath: ", 9) == 0)
+			{
+				if(svnPath.empty())
+					svnPath = line.c_str() + 9;				
+			}
+			else if(strncmp(line.c_str(), "Rev: ", 5) == 0)
+			{
+				rev = atoi(line.c_str() + 4);
+				cout << rev << ", ";
+			}
+		}
+
+	}
+	cout << endl;
+
+
 }
