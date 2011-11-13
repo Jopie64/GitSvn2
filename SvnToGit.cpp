@@ -438,14 +438,20 @@ void onFetch(int argc, wchar_t* argv[])
 	Git::CRepo gitRepo;
 	GitSvn::openCur(gitRepo);
 
+	svn::Repo svnRepo;
+
 	string remote;
 	if(argc > 2)
 		remote = GitSvn::wtoa(argv[2]);
 	else
 		remote = "svn";
 
-	std::string svnPath;
-	Git::CCommitWalker walker;
+	RevSyncCtxt ctxt(gitRepo, svnRepo, "");
+
+	//Initialize
+	std::string			svnPath;
+	bool				bFirst = true;
+	Git::CCommitWalker	walker;
 	walker.Init(gitRepo);
 	walker.AddRev(gitRepo.GetRef(GitSvn::toRef(remote, GitSvn::eRT_meta).c_str()).Oid());
 	for(;!walker.End(); ++walker)
@@ -453,10 +459,14 @@ void onFetch(int argc, wchar_t* argv[])
 		Git::CCommit commit(gitRepo, walker.Curr());
 		istringstream msg(commit.Message());
 		string line;
-		int rev = 0;
+		string svnMsg;
+		bool bSvnMsg = false;
+		int rev = -1;
 		while(getline(msg, line))
 		{
-			if(strncmp(line.c_str(), "SvnPath: ", 9) == 0)
+			if(bSvnMsg)
+				svnMsg += line;
+			else if(strncmp(line.c_str(), "SvnPath: ", 9) == 0)
 			{
 				if(svnPath.empty())
 					svnPath = line.c_str() + 9;				
@@ -466,9 +476,30 @@ void onFetch(int argc, wchar_t* argv[])
 				rev = atoi(line.c_str() + 4);
 				cout << rev << ", ";
 			}
+			else if(strncmp(line.c_str(), "Msg:", 4) == 0)
+				bSvnMsg = true;
 		}
-
+		if(rev >= 0)
+		{
+			GitOids& rootOids			= ctxt.SetOids("", rev);
+			Git::CTree tree(gitRepo, commit.Tree());
+			
+			rootOids.m_oidContentTree	= tree.Entry("content").Oid();
+			rootOids.m_oidMetaTree		= tree.Entry("meta").Oid();
+			if(bFirst)
+			{
+				bFirst = false;
+				ctxt.SetOids("", SVN_INVALID_REVNUM) = rootOids;
+			}
+		}
 	}
+
+	if(svnPath.empty())
+		throw std::runtime_error("SVN path not set. Please specify with gitsvn path ... command.");
+
+	svnRepo.Open(G_svnCtxt, svnPath.c_str());
+
+	ctxt.m_svnRepoUrl = svnPath;
 	cout << endl;
 
 
