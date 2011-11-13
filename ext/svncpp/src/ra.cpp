@@ -16,9 +16,20 @@ public:
 	Pool m_pool;
 };
 
+Repo::Repo()
+{
+}
+
 Repo::Repo(svn::Context* ctxt,
 		   const char * repos_URL,
 		   const char * uuid)
+{
+	Open(ctxt, repos_URL, uuid);
+}
+
+void Repo::Open(class Context* ctxt,
+	 const char * repos_URL,
+	 const char * uuid)
 {
 	static RaInit init;
 	svn_ra_callbacks2_t* callbacks = NULL;
@@ -28,6 +39,7 @@ Repo::Repo(svn::Context* ctxt,
 	ThrowIfError(svn_ra_open3(&ses, repos_URL, uuid, callbacks, this, NULL, pool()));
 	Attach(ses);
 }
+
 
 std::string Repo::getRoot() const
 {

@@ -13,7 +13,11 @@ namespace svn
 class Repo : public CLibSvnObjWrapper<svn_ra_session_t>
 {
 public:
+	Repo();
 	Repo(class Context* ctxt,
+		 const char * repos_URL,
+		 const char * uuid = NULL);
+	void Open(class Context* ctxt,
 		 const char * repos_URL,
 		 const char * uuid = NULL);
 
