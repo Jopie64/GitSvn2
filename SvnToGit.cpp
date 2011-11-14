@@ -446,16 +446,24 @@ void onFetch(int argc, wchar_t* argv[])
 	else
 		remote = "svn";
 
+
 	RevSyncCtxt ctxt(gitRepo, svnRepo, "");
+
+	ctxt.m_csBaseRefName = remote;
 
 	//Initialize
 	std::string			svnPath;
 	bool				bFirst = true;
+	svn_revnum_t		LastRev = 0;
 	Git::CCommitWalker	walker;
 	walker.Init(gitRepo);
 	walker.AddRev(gitRepo.GetRef(GitSvn::toRef(remote, GitSvn::eRT_meta).c_str()).Oid());
+
 	for(;!walker.End(); ++walker)
 	{
+		if(ctxt.m_lastCommit.isNull())
+			ctxt.m_lastCommit = walker.Curr();
+
 		Git::CCommit commit(gitRepo, walker.Curr());
 		istringstream msg(commit.Message());
 		string line;
@@ -474,7 +482,12 @@ void onFetch(int argc, wchar_t* argv[])
 			else if(strncmp(line.c_str(), "Rev: ", 5) == 0)
 			{
 				rev = atoi(line.c_str() + 4);
-				cout << rev << ", ";
+				if(LastRev <= 0 && rev > 0)
+				{
+					LastRev = rev;
+					cout << "Head is at r" << LastRev << ", " << ctxt.m_lastCommit << endl;
+				}
+				cout << "Initializing... " << rev << "  \r" << flush;
 			}
 			else if(strncmp(line.c_str(), "Msg:", 4) == 0)
 				bSvnMsg = true;
@@ -495,12 +508,17 @@ void onFetch(int argc, wchar_t* argv[])
 	}
 
 	if(svnPath.empty())
-		throw std::runtime_error("SVN path not set. Please specify with gitsvn path ... command.");
+		throw std::runtime_error("SVN path not set. Please specify with 'gitsvn setsvnpath <path>' command.");
 
 	svnRepo.Open(G_svnCtxt, svnPath.c_str());
 
+	gitRepo.BuildTreeNode(ctxt.m_rootTree, Git::CTree(gitRepo, Git::CCommit(gitRepo, ctxt.m_lastCommit).Tree()));
 	ctxt.m_svnRepoUrl = svnPath;
-	cout << endl;
 
+	cout << "Initializing... " << "Done. Continuing from rev " << LastRev << "..." << endl;
 
+	RevSyncCtxt::EditorMaker editorMaker(&ctxt);
+	editorMaker.replay(&svnRepo, LastRev+1, svnRepo.head(), 1, true);
+
+	cout << "Done." << endl;
 }
