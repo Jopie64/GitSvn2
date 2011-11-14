@@ -34,4 +34,5 @@ void onSetSvnPath(int argc, wchar_t* argv[])
 
 	Git::CSignature sig(gitRepo);
 	gitRepo.Commit(remote.c_str(), sig, sig, commitMsg.c_str(), tree, parents);
+	cout << "SVN path set to " << GitSvn::wtoa(path) << endl;
 }

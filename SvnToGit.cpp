@@ -67,7 +67,7 @@ struct RevSyncCtxt : RunCtxt
 		Git::CTreeNode* contentNode	= m_Tree_Content->GetByPath(path.c_str(), false);
 		Git::CTreeNode* metaNode	= m_Tree_Meta->GetByPath(path.c_str(), false);
 		if(!metaNode)
-			throw std::logic_error("Meta node should always exist...");
+			throw std::logic_error(JStd::String::Format("Meta node should always exist. Path \"%s\"@r%d doesn't.", path.c_str(), rev));
 
 		if(metaNode->IsFile())
 		{
