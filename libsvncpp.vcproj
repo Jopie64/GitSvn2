@@ -240,6 +240,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ext\svncpp\src\repos.cpp"
+				>
+			</File>
+			<File
 				RelativePath="ext\svncpp\src\revision.cpp"
 				>
 			</File>
@@ -351,6 +355,10 @@
 			</File>
 			<File
 				RelativePath=".\ext\svncpp\include\svncpp\replay.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\ext\svncpp\include\svncpp\repos.hpp"
 				>
 			</File>
 			<File
