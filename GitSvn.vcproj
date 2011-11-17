@@ -224,6 +224,10 @@
 				Name="Cmd"
 				>
 				<File
+					RelativePath=".\LoadSvnDump.cpp"
+					>
+				</File>
+				<File
 					RelativePath=".\SetSvnPath.cpp"
 					>
 				</File>
@@ -273,6 +277,10 @@
 			<Filter
 				Name="Cmd"
 				>
+				<File
+					RelativePath=".\LoadSvnDump.h"
+					>
+				</File>
 				<File
 					RelativePath=".\SvnToGit.h"
 					>
