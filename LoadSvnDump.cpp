@@ -19,6 +19,27 @@ struct LoadSvnDump : RunCtxt, svn::dump::Parser
 	class MyNode : public svn::dump::Node
 	{
 	public:
+		MyNode(const char* path):m_path(path){}
+
+		std::string m_path;
+	};
+
+	class MyFile : public MyNode
+	{
+	public:
+		MyFile(const char* path):MyNode(path){}
+		~MyFile()
+		{
+		}
+	};
+
+	class MyDir : public MyNode
+	{
+	public:
+		MyDir(const char* path):MyNode(path){}
+		~MyDir()
+		{
+		}
 	};
 
 	static void showProps(const char* name, svn::dump::Properties& props)
@@ -36,12 +57,21 @@ struct LoadSvnDump : RunCtxt, svn::dump::Parser
 	public:
 		virtual svn::dump::Node* onNewNode(svn::dump::Properties& props)
 		{
-			//showProps("Node", props);
+			showProps("Node", props);
+			std::string path;
+			bool isDir = false;
 			for(svn::dump::Properties::iterator i = props.begin(); i != props.end(); ++i)
 			{
+				if(i->first == "Node-path")
+					path = i->second;
+				else if(i->first == "Node-kind")
+					isDir = i->second == "dir";
 				//cout << i->first << ": " << i->second << endl;
 			}
-			return new MyNode;
+			if(isDir)
+				return new MyDir(path.c_str());
+			else
+				return new MyFile(path.c_str());
 		}
 	};
 
