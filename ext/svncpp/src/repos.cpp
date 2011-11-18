@@ -101,8 +101,10 @@ svn_error_t *set_node_property(void *node_baton,
 /** For a given @a node_baton, delete property @a name. */
 svn_error_t *delete_node_property(void *node_baton, const char *name)
 {
+	Node* node = (Node*)node_baton;
 	try
 	{
+		node->onDelProp(name);
 	}
 	catch(svn::ClientException& e){ return e.detach(); }
 	return NULL;
@@ -111,8 +113,10 @@ svn_error_t *delete_node_property(void *node_baton, const char *name)
 /** For a given @a node_baton, remove all properties. */
 svn_error_t *remove_node_props(void *node_baton)
 {
+	Node* node = (Node*)node_baton;
 	try
 	{
+		node->onDelAllProps();
 	}
 	catch(svn::ClientException& e){ return e.detach(); }
 	return NULL;
@@ -129,8 +133,11 @@ svn_error_t *remove_node_props(void *node_baton)
 svn_error_t *set_fulltext(svn_stream_t **stream,
                            void *node_baton)
 {
+	Node* node = (Node*)node_baton;
 	try
 	{
+		Stream* myStream = node->getStream();
+		*stream = myStream ? myStream->GetInternalObj() : NULL;
 	}
 	catch(svn::ClientException& e){ return e.detach(); }
 	return NULL;
@@ -149,8 +156,17 @@ svn_error_t *apply_textdelta(svn_txdelta_window_handler_t *handler,
                               void **handler_baton,
                               void *node_baton)
 {
+	Node* node = (Node*)node_baton;
 	try
 	{
+		delta::ApplyDeltaHandler* dhandler = node->applyDelta();
+		if(dhandler)
+		{
+			*handler		= &delta::ApplyDeltaHandler::txdelta_window_handler;
+			*handler_baton	= dhandler;
+		}
+		else
+			*handler = NULL;
 	}
 	catch(svn::ClientException& e){ return e.detach(); }
 	return NULL;

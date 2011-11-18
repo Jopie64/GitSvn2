@@ -2,6 +2,7 @@
 
 #include "stream.hpp"
 #include "apr_hash.hpp"
+#include "delta.hpp"
 
 namespace svn
 {
@@ -22,12 +23,15 @@ class ObjWithProps
 {
 public:
 	virtual void onSetProp(const char* name, const char* value){}
+	virtual void onDelProp(const char* name){}
+	virtual void onDelAllProps(){}
 };
 
 class Node : public ObjWithProps
 {
 public:
-
+	virtual Stream*						getStream(){ return NULL; }
+	virtual delta::ApplyDeltaHandler*	applyDelta(){ return NULL; }
 };
 
 class Revision : public ObjWithProps

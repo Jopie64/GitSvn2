@@ -1,6 +1,7 @@
 #pragma once
 #include "svncpp/ra.hpp"
 #include "svncpp/apr_hash.hpp"
+#include "svncpp/delta.hpp"
 
 namespace svn
 {
@@ -52,12 +53,10 @@ public:
 	virtual void	   deleteEntry(const char* path, svn_revnum_t revision) =0;
 };
 
-class ApplyDeltaHandler
+class ApplyDeltaHandler : public delta::ApplyDeltaHandler
 {
 public:
 	ApplyDeltaHandler();
-	virtual void handleWindow(svn_txdelta_window_t *window)=0;
-	virtual void onClose(){}
 
 	File* m_file;
 };

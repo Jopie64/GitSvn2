@@ -282,26 +282,6 @@ svn_error_t *close_file (void *file_baton,
 }
 
 
-svn_error_t *ApplyDeltaHandler_txdelta_window_handler_t(svn_txdelta_window_t *window, void *baton)
-{
-	ApplyDeltaHandler* handler = (ApplyDeltaHandler*)baton;
-	try
-	{
-		if(handler)
-		{
-			if(!window)
-			{
-				handler->onClose();				
-				delete handler;
-			}
-			else
-				handler->handleWindow(window);
-		}
-	}
-	catch(svn::ClientException& e){ return e.detach(); }
-	return NULL;
-}
-
 svn_error_t *apply_textdelta (void *file_baton,
 							  const char *base_checksum,
 							  apr_pool_t *result_pool,
@@ -315,7 +295,7 @@ svn_error_t *apply_textdelta (void *file_baton,
 		if(dhandler)
 		{
 			dhandler->m_file			= file;
-			*handler					= &ApplyDeltaHandler_txdelta_window_handler_t;
+			*handler					= &ApplyDeltaHandler::txdelta_window_handler;
 		}
 		*handler_baton				= dhandler;
 	}

@@ -192,6 +192,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ext\svncpp\src\delta.cpp"
+				>
+			</File>
+			<File
 				RelativePath="ext\svncpp\src\dirent.cpp"
 				>
 			</File>
@@ -303,6 +307,10 @@
 			</File>
 			<File
 				RelativePath="ext\svncpp\include\svncpp\datetime.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\ext\svncpp\include\svncpp\delta.hpp"
 				>
 			</File>
 			<File
