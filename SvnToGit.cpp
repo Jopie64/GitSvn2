@@ -1,6 +1,6 @@
 #include "StdAfx.h"
 #include "SvnToGit.h"
-#include "CmdLine.h"
+#include "gitcpp/jstd/CmdLine.h"
 
 #include "GitSvnAux.h"
 #include "svncpp/client.hpp"
@@ -11,14 +11,14 @@ using namespace std;
 
 void onClone(int argc, wchar_t* argv[]);
 void onFetch(int argc, wchar_t* argv[]);
-static bool registered1 = CmdLine::Register(L"clone", &onClone);
-static bool registered2 = CmdLine::Register(L"fetch", &onFetch);
+static bool registered1 = JStd::CmdLine::Register(L"clone", &onClone);
+static bool registered2 = JStd::CmdLine::Register(L"fetch", &onFetch);
 
 void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char* refBaseName);
 void onClone(int argc, wchar_t* argv[])
 {
 	if(argc < 4)
-		CmdLine::throwUsage(L"<git repo path> <svn repo path> [remote name]");
+		JStd::CmdLine::throwUsage(L"<git repo path> <svn repo path> [remote name]");
 
 	std::string remoteName;
 	if(argc > 4)

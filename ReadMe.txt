@@ -16,3 +16,9 @@
  files which are not transfered by the 'git clone' command.
 
 /////////////////////////////////////////////////////////////////////////////
+
+
+Command line examples:
+init D:\test\gitsvn\gitpartcmd svn://jdmstorage.jdm1.maassluis/main
+
+setsvnpath svn://jdmstorage.jdm1.maassluis/main

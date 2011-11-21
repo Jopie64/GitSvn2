@@ -1,14 +1,14 @@
 #include "StdAfx.h"
 #include "LoadSvnDump.h"
 #include "GitSvnAux.h"
-#include "CmdLine.h"
+#include "gitcpp/jstd/CmdLine.h"
 #include "svncpp/repos.hpp"
 #include <fstream>
 
 #pragma comment(lib, "ext\\svn\\lib\\libsvn_repos-1.lib")
 
 void onLoadSvnDump(int argc, wchar_t* argv[]);
-static bool registered = CmdLine::Register(L"loadsvndump", &onLoadSvnDump);
+static bool registered = JStd::CmdLine::Register(L"loadsvndump", &onLoadSvnDump);
 
 using namespace std;
 using namespace GitSvn;
@@ -104,7 +104,7 @@ struct LoadSvnDump : RunCtxt, svn::dump::Parser
 void onLoadSvnDump(int argc, wchar_t* argv[])
 {
 	if(argc < 3)
-		CmdLine::throwUsage(L"[path_to_dumpfile]");
+		JStd::CmdLine::throwUsage(L"[path_to_dumpfile]");
 	Git::CRepo repo;
 	GitSvn::openCur(repo);
 	

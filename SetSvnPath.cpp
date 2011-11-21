@@ -1,16 +1,16 @@
 #include "stdafx.h"
-#include "CmdLine.h"
+#include "gitcpp/jstd/CmdLine.h"
 #include "GitSvnAux.h"
 
 void onSetSvnPath(int argc, wchar_t* argv[]);
-static bool registered = CmdLine::Register(L"setsvnpath", &onSetSvnPath);
+static bool registered = JStd::CmdLine::Register(L"setsvnpath", &onSetSvnPath);
 
 using namespace std;
 
 void onSetSvnPath(int argc, wchar_t* argv[])
 {
 	if(argc < 3)
-		CmdLine::throwUsage(L"<new svn path> [remote name]");
+		JStd::CmdLine::throwUsage(L"<new svn path> [remote name]");
 
 	wstring path = argv[2];
 	string remote;

@@ -5,7 +5,7 @@
 #include "GitCpp\Git.h"
 #include <iostream>
 #include "GitCpp\jstd\JStd.h"
-#include "CmdLine.h"
+#include "GitCpp\jstd\CmdLine.h"
 
 
 #include <windows.h>
@@ -48,11 +48,11 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		//Test();
 		if(argc < 2)
-			CmdLine::throwUsage(L"<command> <params>");
-		CmdLine::Call(argv[1], argc, argv);
+			JStd::CmdLine::throwUsage(L"<command> <params>");
+		JStd::CmdLine::Call(argv[1], argc, argv);
 	}
 
-	catch(CmdLine::CUsageException& e)
+	catch(JStd::CmdLine::CUsageException& e)
 	{
 		if(argc > 1)
 			wcout << L"Usage: " << argv[0] << L" " << argv[1];
