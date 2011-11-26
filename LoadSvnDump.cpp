@@ -21,24 +21,34 @@ struct LoadSvnDump : RunCtxt, svn::dump::Parser
 	class MyNode : public svn::dump::Node
 	{
 	public:
-		MyNode(const char* path):m_path(path){}
+		MyNode(const char* path, LoadSvnDump* ctxt):m_path(path),m_ctxt(ctxt){}
 
+		
+		LoadSvnDump* m_ctxt;
 		std::string m_path;
 	};
 
 	class MyFile : public MyNode
 	{
 	public:
-		MyFile(const char* path):MyNode(path){}
+		MyFile(const char* path, LoadSvnDump* ctxt):MyNode(path,ctxt){}
 		~MyFile()
 		{
+		}
+		virtual svn::Stream*					getStream() override
+		{
+			return NULL;
+		}
+		virtual svn::delta::ApplyDeltaHandler*	applyDelta() override
+		{
+			return NULL;
 		}
 	};
 
 	class MyDir : public MyNode
 	{
 	public:
-		MyDir(const char* path):MyNode(path){}
+		MyDir(const char* path, LoadSvnDump* ctxt):MyNode(path,ctxt){}
 		~MyDir()
 		{
 		}
@@ -57,6 +67,8 @@ struct LoadSvnDump : RunCtxt, svn::dump::Parser
 	class MyRevision : public svn::dump::Revision
 	{
 	public:
+		MyRevision(LoadSvnDump* ctxt):m_ctxt(ctxt){}
+		LoadSvnDump* m_ctxt;
 		virtual svn::dump::Node* onNewNode(svn::dump::Properties& props)
 		{
 			showProps("Node", props);
@@ -71,9 +83,9 @@ struct LoadSvnDump : RunCtxt, svn::dump::Parser
 				//cout << i->first << ": " << i->second << endl;
 			}
 			if(isDir)
-				return new MyDir(path.c_str());
+				return new MyDir(path.c_str(), m_ctxt);
 			else
-				return new MyFile(path.c_str());
+				return new MyFile(path.c_str(), m_ctxt);
 		}
 	};
 
@@ -95,7 +107,7 @@ struct LoadSvnDump : RunCtxt, svn::dump::Parser
 			if(i->first == "Revision-number")
 				cout << i->second << ",";
 		}
-		return new MyRevision;
+		return new MyRevision(this);
 	}
 };
 

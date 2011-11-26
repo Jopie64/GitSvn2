@@ -32,12 +32,6 @@ void Editor::replay(Repo* repo,
 }
 
 
-ApplyDeltaHandler::ApplyDeltaHandler()
-:	m_file(NULL)
-{
-}
-
-
 // *** RangeReplay
 RangeReplay::RangeReplay()
 {
@@ -294,7 +288,7 @@ svn_error_t *apply_textdelta (void *file_baton,
 		ApplyDeltaHandler* dhandler	= file->applyDelta(base_checksum);
 		if(dhandler)
 		{
-			dhandler->m_file			= file;
+//			dhandler->m_file			= file;
 			*handler					= &ApplyDeltaHandler::txdelta_window_handler;
 		}
 		*handler_baton				= dhandler;

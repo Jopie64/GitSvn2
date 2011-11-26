@@ -53,13 +53,7 @@ public:
 	virtual void	   deleteEntry(const char* path, svn_revnum_t revision) =0;
 };
 
-class ApplyDeltaHandler : public delta::ApplyDeltaHandler
-{
-public:
-	ApplyDeltaHandler();
-
-	File* m_file;
-};
+typedef delta::ApplyDeltaHandler ApplyDeltaHandler;
 
 class File : public DirEntry
 {
