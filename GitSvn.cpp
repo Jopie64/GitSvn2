@@ -47,9 +47,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		G_svnCtxt = new svn::Context();
 
 		//Test();
-		if(argc < 2)
-			JStd::CmdLine::throwUsage(L"<command> <params>");
-		JStd::CmdLine::Call(argv[1], argc, argv);
+		JStd::CmdLine::CallDefaultWithCatch(wcout, argc, argv);
 	}
 
 	catch(JStd::CmdLine::CUsageException& e)

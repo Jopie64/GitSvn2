@@ -7,7 +7,9 @@
 
 #pragma comment(lib, "ext\\svn\\lib\\libsvn_repos-1.lib")
 
-void onLoadSvnDump(int argc, wchar_t* argv[]);
+using JStd::CmdLine::CmdLine;
+
+void onLoadSvnDump(CmdLine& cmdLine);
 static bool registered = JStd::CmdLine::Register(L"loadsvndump", &onLoadSvnDump);
 
 using namespace std;
@@ -101,17 +103,19 @@ struct LoadSvnDump : RunCtxt, svn::dump::Parser
 
 
 
-void onLoadSvnDump(int argc, wchar_t* argv[])
+void onLoadSvnDump(CmdLine& cmdLine)
 {
-	if(argc < 3)
+	std::wstring fileName = cmdLine.next();
+	if(fileName.empty())
 		JStd::CmdLine::throwUsage(L"[path_to_dumpfile]");
 	Git::CRepo repo;
 	GitSvn::openCur(repo);
+
 	
 	LoadSvnDump dumpLoader(repo);
-	ifstream dumpFile(argv[2], ios::binary | ios::in);
+	ifstream dumpFile(fileName.c_str(), ios::binary | ios::in);
 	if(!dumpFile)
-		throw runtime_error(JStd::String::Format("Cannot open dumpfile: %s", argv[2]));
+		throw runtime_error(JStd::String::Format("Cannot open dumpfile: %s", fileName.c_str()));
 
 	dumpLoader.parse(svn::Stream(dumpFile));
 }

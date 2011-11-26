@@ -7,25 +7,26 @@
 #include <sstream>
 using namespace std;
 
+using JStd::CmdLine::CmdLine;
 
 
-void onClone(int argc, wchar_t* argv[]);
-void onFetch(int argc, wchar_t* argv[]);
+void onClone(CmdLine& cmdLine);
+void onFetch(CmdLine& cmdLine);
 static bool registered1 = JStd::CmdLine::Register(L"clone", &onClone);
 static bool registered2 = JStd::CmdLine::Register(L"fetch", &onFetch);
 
 void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char* refBaseName);
-void onClone(int argc, wchar_t* argv[])
+void onClone(CmdLine& cmdLine)
 {
-	if(argc < 4)
+	std::wstring gitPath = cmdLine.next();
+	std::wstring svnPath = cmdLine.next();
+	if(gitPath.empty() || svnPath.empty())
 		JStd::CmdLine::throwUsage(L"<git repo path> <svn repo path> [remote name]");
 
-	std::string remoteName;
-	if(argc > 4)
-		remoteName = JStd::String::ToMult(argv[4], CP_UTF8);
-	else
+	std::string remoteName = JStd::String::ToMult(cmdLine.next(), CP_UTF8);
+	if(remoteName.empty())
 		remoteName = "svn";
-	SvnToGitSync(argv[2], JStd::String::ToMult(argv[3], CP_UTF8).c_str(), remoteName.c_str());
+	SvnToGitSync(gitPath.c_str(), JStd::String::ToMult(svnPath.c_str(), CP_UTF8).c_str(), remoteName.c_str());
 }
 
 
@@ -433,17 +434,15 @@ void SvnToGitSync(const wchar_t* gitRepoPath, const char* svnRepoUrl, const char
 	cout << "Done." << endl;
 }
 
-void onFetch(int argc, wchar_t* argv[])
+void onFetch(CmdLine& cmdLine)
 {
 	Git::CRepo gitRepo;
 	GitSvn::openCur(gitRepo);
 
 	svn::Repo svnRepo;
 
-	string remote;
-	if(argc > 2)
-		remote = GitSvn::wtoa(argv[2]);
-	else
+	string remote = GitSvn::wtoa(cmdLine.next());
+	if(remote.empty())
 		remote = "svn";
 
 

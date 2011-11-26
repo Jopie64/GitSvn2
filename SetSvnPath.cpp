@@ -2,21 +2,21 @@
 #include "gitcpp/jstd/CmdLine.h"
 #include "GitSvnAux.h"
 
-void onSetSvnPath(int argc, wchar_t* argv[]);
+using JStd::CmdLine::CmdLine;
+
+void onSetSvnPath(CmdLine& cmdLine);
 static bool registered = JStd::CmdLine::Register(L"setsvnpath", &onSetSvnPath);
 
 using namespace std;
 
-void onSetSvnPath(int argc, wchar_t* argv[])
+void onSetSvnPath(CmdLine& cmdLine)
 {
-	if(argc < 3)
+	std::wstring path = cmdLine.next();
+	if(path.empty())
 		JStd::CmdLine::throwUsage(L"<new svn path> [remote name]");
 
-	wstring path = argv[2];
-	string remote;
-	if(argc > 3)
-		remote = GitSvn::wtoa(argv[3]);
-	else
+	string remote = GitSvn::wtoa(cmdLine.next());
+	if(remote.empty())
 		remote = "svn";
 
 	remote = GitSvn::toRef(remote, GitSvn::eRT_meta);
